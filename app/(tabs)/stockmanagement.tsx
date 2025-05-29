@@ -162,14 +162,6 @@ export default function StockManagement() {
 			</View>
 			{/* Actions */}
 			<View style={[styles.cellContainer, styles.actionCell, { flex: 2 }]}>
-				{/* Add Stock Button */}
-				<TouchableOpacity
-					style={styles.addStockButton}
-					onPress={() => handleAddStock(item)}
-				>
-					<Text style={styles.addStockText}>+1</Text>
-				</TouchableOpacity>
-
 				{/* Action Dropdown Button */}
 				<TouchableOpacity
 					style={styles.actionDropdownButton}
@@ -392,13 +384,6 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		alignItems: "center",
 		gap: 8, // Increased gap for better spacing
-	},
-	addStockButton: {
-		backgroundColor: "rgba(0, 212, 255, 0.2)",
-		paddingHorizontal: 8,
-		paddingVertical: 6,
-		borderRadius: 6,
-		minWidth: 28,
 	},
 	addStockText: {
 		fontSize: 11,
