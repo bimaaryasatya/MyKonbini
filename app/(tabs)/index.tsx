@@ -30,7 +30,7 @@ export default function HomeScreen() {
 
 	const handleViewLogs = () => {
 		// Navigate ke halaman log
-		router.push("./StockStack/logScreen"); // Navigate to LogScreen within StockStack
+		router.push("../logScreen"); // Navigate to LogScreen within StockStack
 	};
 
 	return (
