@@ -12,18 +12,19 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
+import "react-native-gesture-handler";
 
 const { width, height } = Dimensions.get("window");
 
 export default function HomeScreen() {
 	const handleManageStock = () => {
 		// Navigate ke halaman manajemen stok
-		router.push("/stockmanagement");
+		router.push("/StockStack");
 	};
 
 	const handleStartTransaction = () => {
 		// Navigate ke halaman transaksi
-		router.push("/transaction");
+		router.push("/");
 	};
 
 	return (

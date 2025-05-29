@@ -1,574 +1,471 @@
-// app/stock-management.tsx
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+import React, { useEffect, useState } from "react";
 import {
 	Alert,
 	FlatList,
-	Modal,
-	ScrollView,
 	StyleSheet,
 	Text,
-	TextInput,
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+	addStock,
+	Barang,
+	deleteStock,
+	getAllStock,
+	initDB,
+	updateStock,
+} from "../database";
 
-export default function StockManagementScreen() {
-	const [searchQuery, setSearchQuery] = useState("");
-	const [modalVisible, setModalVisible] = useState(false);
-	const [selectedItem, setSelectedItem] = useState(null);
-	const [isAddMode, setIsAddMode] = useState(false);
+// Define the navigation stack parameters
+type StockStackParamList = {
+	StockManagement: undefined;
+	AddItem: undefined;
+	EditItem: { item: Barang };
+};
 
-	// Form states
-	const [itemName, setItemName] = useState("");
-	const [itemPrice, setItemPrice] = useState("");
-	const [itemStock, setItemStock] = useState("");
-	const [itemCategory, setItemCategory] = useState("");
+export default function StockManagement() {
+	// State variables for form inputs (though not directly used in this component's UI,
+	// they are part of the original code, so keeping them for consistency)
+	const [nama, setNama] = useState("");
+	const [kategori, setKategori] = useState("");
+	const [harga, setHarga] = useState("");
+	const [stok, setStok] = useState("");
 
-	// Sample data - dalam aplikasi nyata, ini akan dari database
-	const [stockData, setStockData] = useState([
-		{
-			id: 1,
-			name: "Kopi Arabica",
-			category: "Minuman",
-			price: 25000,
-			stock: 50,
-			lowStock: false,
-		},
-		{
-			id: 2,
-			name: "Nasi Goreng",
-			category: "Makanan",
-			price: 35000,
-			stock: 25,
-			lowStock: false,
-		},
-		{
-			id: 3,
-			name: "Es Teh Manis",
-			category: "Minuman",
-			price: 8000,
-			stock: 5,
-			lowStock: true,
-		},
-		{
-			id: 4,
-			name: "Ayam Bakar",
-			category: "Makanan",
-			price: 45000,
-			stock: 15,
-			lowStock: false,
-		},
-		{
-			id: 5,
-			name: "Jus Jeruk",
-			category: "Minuman",
-			price: 15000,
-			stock: 3,
-			lowStock: true,
-		},
-	]);
+	// State to hold the list of items
+	const [items, setItems] = useState<Barang[]>([]);
+	// State to manage loading status
+	const [loading, setLoading] = useState(true);
+	// State to track which item's dropdown is currently open
+	const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
-	const filteredData = stockData.filter(
-		(item) =>
-			item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			item.category.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	// Hook for navigation
+	const navigation = useNavigation<NavigationProp<StockStackParamList>>();
 
-	const handleAddItem = () => {
-		setIsAddMode(true);
-		setSelectedItem(null);
-		clearForm();
-		setModalVisible(true);
-	};
+	// Effect hook to initialize the database and load data when the component mounts
+	useEffect(() => {
+		const prepare = async () => {
+			try {
+				// Initialize the database
+				await initDB();
+				// Fetch all stock data
+				const data = await getAllStock();
+				// Set the fetched data to the items state
+				setItems(data);
+			} catch (error) {
+				// Show an alert if database initialization fails
+				Alert.alert("Error", "Gagal inisialisasi database");
+				console.error("Database initialization error:", error);
+			} finally {
+				// Set loading to false regardless of success or failure
+				setLoading(false);
+			}
+		};
+		prepare();
+	}, []); // Empty dependency array means this effect runs only once on mount
 
-	const handleEditItem = (item) => {
-		setIsAddMode(false);
-		setSelectedItem(item);
-		setItemName(item.name);
-		setItemPrice(item.price.toString());
-		setItemStock(item.stock.toString());
-		setItemCategory(item.category);
-		setModalVisible(true);
-	};
-
-	const handleDeleteItem = (item) => {
-		Alert.alert(
-			"Hapus Item",
-			`Apakah Anda yakin ingin menghapus ${item.name}?`,
-			[
-				{ text: "Batal", style: "cancel" },
-				{
-					text: "Hapus",
-					style: "destructive",
-					onPress: () => {
-						setStockData(stockData.filter((i) => i.id !== item.id));
-					},
-				},
-			]
-		);
-	};
-
-	const handleSaveItem = () => {
-		if (!itemName || !itemPrice || !itemStock || !itemCategory) {
-			Alert.alert("Error", "Semua field harus diisi");
+	// Function to handle adding a new item (not directly used in this component's UI,
+	// but kept for completeness based on original code)
+	const handleAdd = async () => {
+		if (!nama || !kategori || !harga || !stok) {
+			Alert.alert("Validasi", "Semua field harus diisi");
 			return;
 		}
-
-		const newItem = {
-			id: isAddMode ? Date.now() : selectedItem.id,
-			name: itemName,
-			category: itemCategory,
-			price: parseInt(itemPrice),
-			stock: parseInt(itemStock),
-			lowStock: parseInt(itemStock) <= 10,
-		};
-
-		if (isAddMode) {
-			setStockData([...stockData, newItem]);
-		} else {
-			setStockData(
-				stockData.map((item) => (item.id === selectedItem.id ? newItem : item))
-			);
+		try {
+			await addStock(nama, kategori, Number(harga), Number(stok));
+			const data = await getAllStock();
+			setItems(data);
+			// Clear form fields after successful addition
+			setNama("");
+			setKategori("");
+			setHarga("");
+			setStok("");
+		} catch (error) {
+			Alert.alert("Error", "Gagal menambahkan data");
+			console.error("Add item error:", error);
 		}
-
-		setModalVisible(false);
-		clearForm();
 	};
 
-	const clearForm = () => {
-		setItemName("");
-		setItemPrice("");
-		setItemStock("");
-		setItemCategory("");
+	// Function to handle deleting an item
+	const handleDelete = async (id: number) => {
+		try {
+			// Delete the stock item by ID
+			await deleteStock(id);
+			// Refresh the item list after deletion
+			const data = await getAllStock();
+			setItems(data);
+			// Close any open dropdown after deletion
+			setOpenDropdownId(null);
+		} catch (error) {
+			Alert.alert("Error", "Gagal menghapus data");
+			console.error("Delete item error:", error);
+		}
 	};
 
-	const formatCurrency = (amount) => {
-		return new Intl.NumberFormat("id-ID", {
-			style: "currency",
-			currency: "IDR",
-			minimumFractionDigits: 0,
-		}).format(amount);
+	// Function to handle adding +1 to an item's stock
+	const handleAddStock = async (item: Barang) => {
+		try {
+			// Update the stock by incrementing by 1
+			await updateStock(
+				item.id,
+				item.nama_barang,
+				item.kategori,
+				item.harga,
+				item.stok + 1
+			);
+			// Refresh the item list after update
+			const data = await getAllStock();
+			setItems(data);
+		} catch (error) {
+			Alert.alert("Error", "Gagal mengupdate stok");
+			console.error("Update stock error:", error);
+		}
 	};
 
-	const renderStockItem = ({ item }) => (
-		<View style={styles.stockItem}>
-			<View style={styles.itemHeader}>
-				<View style={styles.itemInfo}>
-					<Text style={styles.itemName}>{item.name}</Text>
-					<Text style={styles.itemCategory}>{item.category}</Text>
-				</View>
+	// Component for the table header row
+	const TableHeader = () => (
+		<View style={styles.tableHeader}>
+			<Text style={[styles.headerText, { flex: 2.5 }]}>Nama Barang</Text>
+			<Text style={[styles.headerText, { flex: 1.5 }]}>Kategori</Text>
+			<Text style={[styles.headerText, { flex: 1.5 }]}>Harga</Text>
+			<Text style={[styles.headerText, { flex: 1 }]}>Stok</Text>
+			<Text style={[styles.headerText, { flex: 2 }]}>Aksi</Text>
+		</View>
+	);
+
+	// Component for each table row
+	const TableRow = ({ item }: { item: Barang }) => (
+		<View style={styles.tableRow}>
+			{/* Item Name */}
+			<View style={[styles.cellContainer, { flex: 2.5 }]}>
+				<Text style={styles.cellText} numberOfLines={2}>
+					{item.nama_barang}
+				</Text>
+			</View>
+			{/* Category */}
+			<View style={[styles.cellContainer, { flex: 1.5 }]}>
+				<Text style={styles.cellText} numberOfLines={1}>
+					{item.kategori}
+				</Text>
+			</View>
+			{/* Price */}
+			<View style={[styles.cellContainer, { flex: 1.5 }]}>
+				<Text style={styles.priceText} numberOfLines={1}>
+					{item.harga.toLocaleString()}
+				</Text>
+			</View>
+			{/* Stock */}
+			<View style={[styles.cellContainer, { flex: 1 }]}>
 				<View style={styles.stockBadge}>
-					<Text
-						style={[styles.stockText, item.lowStock && styles.lowStockText]}
-					>
-						{item.stock} pcs
-					</Text>
+					<Text style={styles.stockText}>{item.stok}</Text>
 				</View>
 			</View>
+			{/* Actions */}
+			<View style={[styles.cellContainer, styles.actionCell, { flex: 2 }]}>
+				{/* Add Stock Button */}
+				<TouchableOpacity
+					style={styles.addStockButton}
+					onPress={() => handleAddStock(item)}
+				>
+					<Text style={styles.addStockText}>+1</Text>
+				</TouchableOpacity>
 
-			<View style={styles.itemDetails}>
-				<Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
-				{item.lowStock && (
-					<View style={styles.lowStockWarning}>
-						<Ionicons name="warning" size={16} color="#FF6B6B" />
-						<Text style={styles.lowStockWarningText}>Stok Menipis</Text>
+				{/* Action Dropdown Button */}
+				<TouchableOpacity
+					style={styles.actionDropdownButton}
+					onPress={() =>
+						setOpenDropdownId(openDropdownId === item.id ? null : item.id)
+					}
+				>
+					<Text style={styles.actionDropdownText}>Aksi ▼</Text>
+				</TouchableOpacity>
+
+				{/* Dropdown Menu */}
+				{openDropdownId === item.id && (
+					<View style={styles.dropdownMenu}>
+						{/* Edit Option */}
+						<TouchableOpacity
+							style={styles.dropdownOption}
+							onPress={() => {
+								navigation.navigate("EditItem", { item });
+								setOpenDropdownId(null); // Close dropdown after action
+							}}
+						>
+							<Text style={styles.dropdownOptionText}>✏ Edit</Text>
+						</TouchableOpacity>
+						{/* Delete Option */}
+						<TouchableOpacity
+							style={[styles.dropdownOption, styles.dropdownOptionDelete]}
+							onPress={() => {
+								Alert.alert("Konfirmasi", `Hapus barang ${item.nama_barang}?`, [
+									{ text: "Batal", style: "cancel" },
+									{
+										text: "Hapus",
+										style: "destructive",
+										onPress: () => handleDelete(item.id),
+									},
+								]);
+								setOpenDropdownId(null); // Close dropdown after action
+							}}
+						>
+							<Text style={styles.dropdownOptionText}>🗑 Hapus</Text>
+						</TouchableOpacity>
 					</View>
 				)}
-			</View>
-
-			<View style={styles.itemActions}>
-				<TouchableOpacity
-					style={styles.editButton}
-					onPress={() => handleEditItem(item)}
-				>
-					<Ionicons name="pencil" size={18} color="#00d4ff" />
-					<Text style={styles.editButtonText}>Edit</Text>
-				</TouchableOpacity>
-
-				<TouchableOpacity
-					style={styles.deleteButton}
-					onPress={() => handleDeleteItem(item)}
-				>
-					<Ionicons name="trash" size={18} color="#FF6B6B" />
-					<Text style={styles.deleteButtonText}>Hapus</Text>
-				</TouchableOpacity>
 			</View>
 		</View>
 	);
 
-	return (
-		<SafeAreaView style={styles.container}>
-			{/* Header */}
-			<LinearGradient colors={["#1a1a2e", "#16213e"]} style={styles.header}>
-				<TouchableOpacity
-					style={styles.backButton}
-					onPress={() => router.back()}
-				>
-					<Ionicons name="arrow-back" size={24} color="white" />
-				</TouchableOpacity>
-				<Text style={styles.headerTitle}>Manajemen Stok</Text>
-				<TouchableOpacity style={styles.addButton} onPress={handleAddItem}>
-					<Ionicons name="add" size={24} color="white" />
-				</TouchableOpacity>
-			</LinearGradient>
+	// Render loading state
+	if (loading) {
+		return (
+			<View style={styles.center}>
+				<Text style={styles.loadingText}>Loading...</Text>
+			</View>
+		);
+	}
 
-			{/* Search Bar */}
-			<View style={styles.searchContainer}>
-				<View style={styles.searchBar}>
-					<Ionicons name="search" size={20} color="#b0b3b8" />
-					<TextInput
-						style={styles.searchInput}
-						placeholder="Cari barang atau kategori..."
-						placeholderTextColor="#b0b3b8"
-						value={searchQuery}
-						onChangeText={setSearchQuery}
+	// Main component render
+	return (
+		<View style={styles.container}>
+			{/* Header Section */}
+			<View style={styles.header}>
+				<Text style={styles.title}>Manajemen Stok Barang</Text>
+				<Text style={styles.subtitle}>Kelola inventori dengan mudah</Text>
+			</View>
+
+			{/* Add Item Button */}
+			<TouchableOpacity
+				style={styles.buttonContainer}
+				onPress={() => navigation.navigate("AddItem")}
+			>
+				<Text style={styles.buttonText}>+ Tambah Barang</Text>
+			</TouchableOpacity>
+
+			{/* Table Container */}
+			<View style={styles.tableContainer}>
+				<Text style={styles.listTitle}>
+					Daftar Barang ({items.length} item)
+				</Text>
+
+				<View style={styles.table}>
+					{/* Table Header */}
+					<TableHeader />
+					{/* FlatList for rendering table rows */}
+					<FlatList
+						data={items}
+						keyExtractor={(item) => item.id.toString()}
+						renderItem={({ item }) => <TableRow item={item} />}
+						ListEmptyComponent={
+							<View style={styles.emptyContainer}>
+								<Text style={styles.emptyText}>Tidak ada data barang.</Text>
+							</View>
+						}
+						showsVerticalScrollIndicator={false}
+						ItemSeparatorComponent={() => <View style={styles.separator} />}
 					/>
 				</View>
 			</View>
-
-			{/* Stats */}
-			<View style={styles.statsContainer}>
-				<View style={styles.statCard}>
-					<Ionicons name="cube" size={24} color="#00d4ff" />
-					<Text style={styles.statNumber}>{stockData.length}</Text>
-					<Text style={styles.statLabel}>Total Item</Text>
-				</View>
-				<View style={styles.statCard}>
-					<Ionicons name="warning" size={24} color="#FF6B6B" />
-					<Text style={styles.statNumber}>
-						{stockData.filter((item) => item.lowStock).length}
-					</Text>
-					<Text style={styles.statLabel}>Stok Menipis</Text>
-				</View>
-				<View style={styles.statCard}>
-					<Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-					<Text style={styles.statNumber}>
-						{stockData.filter((item) => !item.lowStock).length}
-					</Text>
-					<Text style={styles.statLabel}>Stok Aman</Text>
-				</View>
-			</View>
-
-			{/* Stock List */}
-			<FlatList
-				data={filteredData}
-				renderItem={renderStockItem}
-				keyExtractor={(item) => item.id.toString()}
-				contentContainerStyle={styles.listContainer}
-				showsVerticalScrollIndicator={false}
-			/>
-
-			{/* Add/Edit Modal */}
-			<Modal
-				animationType="slide"
-				transparent={true}
-				visible={modalVisible}
-				onRequestClose={() => setModalVisible(false)}
-			>
-				<View style={styles.modalOverlay}>
-					<View style={styles.modalContent}>
-						<View style={styles.modalHeader}>
-							<Text style={styles.modalTitle}>
-								{isAddMode ? "Tambah Item Baru" : "Edit Item"}
-							</Text>
-							<TouchableOpacity onPress={() => setModalVisible(false)}>
-								<Ionicons name="close" size={24} color="white" />
-							</TouchableOpacity>
-						</View>
-
-						<ScrollView style={styles.modalForm}>
-							<View style={styles.formGroup}>
-								<Text style={styles.formLabel}>Nama Item</Text>
-								<TextInput
-									style={styles.formInput}
-									value={itemName}
-									onChangeText={setItemName}
-									placeholder="Masukkan nama item"
-									placeholderTextColor="#b0b3b8"
-								/>
-							</View>
-
-							<View style={styles.formGroup}>
-								<Text style={styles.formLabel}>Kategori</Text>
-								<TextInput
-									style={styles.formInput}
-									value={itemCategory}
-									onChangeText={setItemCategory}
-									placeholder="Masukkan kategori"
-									placeholderTextColor="#b0b3b8"
-								/>
-							</View>
-
-							<View style={styles.formGroup}>
-								<Text style={styles.formLabel}>Harga (Rp)</Text>
-								<TextInput
-									style={styles.formInput}
-									value={itemPrice}
-									onChangeText={setItemPrice}
-									placeholder="Masukkan harga"
-									placeholderTextColor="#b0b3b8"
-									keyboardType="numeric"
-								/>
-							</View>
-
-							<View style={styles.formGroup}>
-								<Text style={styles.formLabel}>Stok</Text>
-								<TextInput
-									style={styles.formInput}
-									value={itemStock}
-									onChangeText={setItemStock}
-									placeholder="Masukkan jumlah stok"
-									placeholderTextColor="#b0b3b8"
-									keyboardType="numeric"
-								/>
-							</View>
-
-							<TouchableOpacity
-								style={styles.saveButton}
-								onPress={handleSaveItem}
-							>
-								<Text style={styles.saveButtonText}>
-									{isAddMode ? "Tambah Item" : "Simpan Perubahan"}
-								</Text>
-							</TouchableOpacity>
-						</ScrollView>
-					</View>
-				</View>
-			</Modal>
-		</SafeAreaView>
+		</View>
 	);
 }
 
+// Stylesheet for the component
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#0f1419",
+		backgroundColor: "#0f1419", // Dark background
 	},
 	header: {
-		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "space-between",
 		paddingHorizontal: 20,
 		paddingVertical: 16,
 		borderBottomWidth: 1,
-		borderBottomColor: "rgba(0, 212, 255, 0.3)",
+		borderBottomColor: "rgba(0, 212, 255, 0.3)", // Light blue border
 	},
-	backButton: {
-		padding: 8,
-	},
-	headerTitle: {
+	title: {
 		fontSize: 20,
-		fontWeight: "bold",
-		color: "white",
-	},
-	addButton: {
-		padding: 8,
-	},
-	searchContainer: {
-		paddingHorizontal: 20,
-		paddingVertical: 16,
-	},
-	searchBar: {
-		flexDirection: "row",
-		alignItems: "center",
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		borderRadius: 12,
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)",
-	},
-	searchInput: {
-		flex: 1,
-		marginLeft: 12,
-		fontSize: 16,
-		color: "white",
-	},
-	statsContainer: {
-		flexDirection: "row",
-		paddingHorizontal: 20,
-		marginBottom: 20,
-	},
-	statCard: {
-		flex: 1,
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		borderRadius: 12,
-		padding: 16,
-		alignItems: "center",
-		marginHorizontal: 4,
-		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.1)",
-	},
-	statNumber: {
-		fontSize: 20,
-		fontWeight: "bold",
-		color: "white",
-		marginTop: 8,
-	},
-	statLabel: {
-		fontSize: 12,
-		color: "#b0b3b8",
-		marginTop: 4,
-		textAlign: "center",
-	},
-	listContainer: {
-		paddingHorizontal: 20,
-		paddingBottom: 20,
-	},
-	stockItem: {
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		borderRadius: 12,
-		padding: 16,
-		marginBottom: 12,
-		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.1)",
-	},
-	itemHeader: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "flex-start",
-		marginBottom: 12,
-	},
-	itemInfo: {
-		flex: 1,
-	},
-	itemName: {
-		fontSize: 18,
 		fontWeight: "bold",
 		color: "white",
 		marginBottom: 4,
 	},
-	itemCategory: {
+	subtitle: {
 		fontSize: 14,
-		color: "#b0b3b8",
+		color: "#b0b3b8", // Greyish text
 	},
-	stockBadge: {
-		backgroundColor: "rgba(0, 212, 255, 0.2)",
-		paddingHorizontal: 12,
-		paddingVertical: 6,
-		borderRadius: 8,
-	},
-	stockText: {
-		fontSize: 14,
-		fontWeight: "bold",
-		color: "#00d4ff",
-	},
-	lowStockText: {
-		color: "#FF6B6B",
-	},
-	itemDetails: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		marginBottom: 12,
-	},
-	itemPrice: {
-		fontSize: 16,
-		fontWeight: "bold",
-		color: "#4CAF50",
-	},
-	lowStockWarning: {
-		flexDirection: "row",
-		alignItems: "center",
-	},
-	lowStockWarningText: {
-		fontSize: 12,
-		color: "#FF6B6B",
-		marginLeft: 4,
-	},
-	itemActions: {
-		flexDirection: "row",
-		justifyContent: "flex-end",
-	},
-	editButton: {
-		flexDirection: "row",
-		alignItems: "center",
-		backgroundColor: "rgba(0, 212, 255, 0.1)",
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-		borderRadius: 8,
-		marginRight: 8,
-	},
-	editButtonText: {
-		fontSize: 14,
-		color: "#00d4ff",
-		marginLeft: 4,
-	},
-	deleteButton: {
-		flexDirection: "row",
-		alignItems: "center",
-		backgroundColor: "rgba(255, 107, 107, 0.1)",
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-		borderRadius: 8,
-	},
-	deleteButtonText: {
-		fontSize: 14,
-		color: "#FF6B6B",
-		marginLeft: 4,
-	},
-	modalOverlay: {
-		flex: 1,
-		backgroundColor: "rgba(0, 0, 0, 0.8)",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	modalContent: {
-		backgroundColor: "#1a1a2e",
-		borderRadius: 16,
-		padding: 0,
-		width: "90%",
-		maxHeight: "80%",
-	},
-	modalHeader: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		padding: 20,
-		borderBottomWidth: 1,
-		borderBottomColor: "rgba(255, 255, 255, 0.1)",
-	},
-	modalTitle: {
-		fontSize: 20,
-		fontWeight: "bold",
-		color: "white",
-	},
-	modalForm: {
-		padding: 20,
-	},
-	formGroup: {
-		marginBottom: 20,
-	},
-	formLabel: {
-		fontSize: 16,
-		color: "white",
-		marginBottom: 8,
-		fontWeight: "600",
-	},
-	formInput: {
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)",
-		borderRadius: 8,
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		fontSize: 16,
-		color: "white",
-	},
-	saveButton: {
-		backgroundColor: "#00d4ff",
+	buttonContainer: {
+		backgroundColor: "#00d4ff", // Bright blue button
 		borderRadius: 8,
 		paddingVertical: 14,
 		alignItems: "center",
-		marginTop: 10,
+		marginHorizontal: 20,
+		marginTop: 16,
+		marginBottom: 16,
+		shadowColor: "#00d4ff", // Shadow for button
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 5,
+		elevation: 5,
 	},
-	saveButtonText: {
+	buttonText: {
 		fontSize: 16,
 		fontWeight: "bold",
 		color: "white",
+	},
+	tableContainer: {
+		flex: 1,
+		paddingHorizontal: 16,
+		paddingBottom: 20,
+	},
+	listTitle: {
+		fontSize: 18,
+		fontWeight: "bold",
+		color: "white",
+		marginBottom: 12,
+	},
+	table: {
+		flex: 1,
+		backgroundColor: "rgba(255, 255, 255, 0.03)", // Slightly transparent white background
+		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: "rgba(255, 255, 255, 0.1)", // Light border
+		overflow: "hidden", // Ensures children respect border radius
+	},
+	tableHeader: {
+		flexDirection: "row",
+		backgroundColor: "rgba(0, 212, 255, 0.1)", // Transparent blue header background
+		paddingVertical: 12,
+		paddingHorizontal: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: "rgba(0, 212, 255, 0.2)", // Darker blue border
+	},
+	headerText: {
+		fontSize: 14,
+		fontWeight: "bold",
+		color: "#00d4ff", // Bright blue text
+		textAlign: "center",
+	},
+	tableRow: {
+		flexDirection: "row",
+		paddingVertical: 12,
+		paddingHorizontal: 12,
+		alignItems: "center",
+		minHeight: 50,
+		position: "relative", // Needed for absolute positioning of dropdown
+	},
+	separator: {
+		height: 1,
+		backgroundColor: "rgba(255, 255, 255, 0.05)", // Light separator line
+		marginHorizontal: 12,
+	},
+	cellContainer: {
+		justifyContent: "center",
+		paddingHorizontal: 4,
+	},
+	cellText: {
+		fontSize: 13,
+		color: "white",
+		textAlign: "center",
+	},
+	priceText: {
+		fontSize: 13,
+		color: "#4CAF50", // Green text for price
+		fontWeight: "600",
+		textAlign: "center",
+	},
+	stockBadge: {
+		backgroundColor: "rgba(0, 212, 255, 0.2)", // Transparent blue badge background
+		paddingHorizontal: 8,
+		paddingVertical: 4,
+		borderRadius: 6,
+		alignSelf: "center",
+		minWidth: 30,
+	},
+	stockText: {
+		fontSize: 12,
+		fontWeight: "bold",
+		color: "#00d4ff", // Bright blue text
+		textAlign: "center",
+	},
+	actionCell: {
+		flexDirection: "row",
+		justifyContent: "center",
+		alignItems: "center",
+		gap: 8, // Increased gap for better spacing
+	},
+	addStockButton: {
+		backgroundColor: "rgba(0, 212, 255, 0.2)",
+		paddingHorizontal: 8,
+		paddingVertical: 6,
+		borderRadius: 6,
+		minWidth: 28,
+	},
+	addStockText: {
+		fontSize: 11,
+		color: "#00d4ff",
+		fontWeight: "bold",
+		textAlign: "center",
+	},
+	actionDropdownButton: {
+		backgroundColor: "rgba(255, 193, 7, 0.2)", // Yellowish background for action button
+		paddingHorizontal: 10,
+		paddingVertical: 6,
+		borderRadius: 6,
+		minWidth: 50,
+	},
+	actionDropdownText: {
+		fontSize: 12,
+		color: "#ffc107", // Yellow text
+		textAlign: "center",
+	},
+	dropdownMenu: {
+		position: "absolute",
+		top: "100%", // Position below the action button
+		right: 0, // Align to the right of the action cell
+		backgroundColor: "#2c3e50", // Dark background for dropdown
+		borderRadius: 8,
+		borderWidth: 1,
+		borderColor: "rgba(255, 255, 255, 0.1)",
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.25,
+		shadowRadius: 3.84,
+		elevation: 5,
+		zIndex: 1000, // Ensure dropdown appears on top
+		minWidth: 100,
+		overflow: "hidden", // Ensure rounded corners
+	},
+	dropdownOption: {
+		paddingVertical: 10,
+		paddingHorizontal: 15,
+		borderBottomWidth: 1,
+		borderBottomColor: "rgba(255, 255, 255, 0.05)",
+	},
+	dropdownOptionDelete: {
+		borderBottomWidth: 0, // No border for the last option
+	},
+	dropdownOptionText: {
+		color: "white",
+		fontSize: 14,
+		textAlign: "left",
+	},
+	emptyContainer: {
+		alignItems: "center",
+		paddingVertical: 40,
+	},
+	emptyText: {
+		color: "#b0b3b8",
+		fontSize: 16,
+		fontStyle: "italic",
+	},
+	center: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "#0f1419",
+	},
+	loadingText: {
+		color: "white",
+		fontSize: 18,
 	},
 });
