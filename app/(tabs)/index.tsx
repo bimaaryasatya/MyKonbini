@@ -6,6 +6,7 @@ import React from "react";
 import {
 	Dimensions,
 	SafeAreaView,
+	ScrollView,
 	StatusBar,
 	StyleSheet,
 	Text,
@@ -27,6 +28,11 @@ export default function HomeScreen() {
 		router.push("/");
 	};
 
+	const handleViewLogs = () => {
+		// Navigate ke halaman log
+		router.push("./StockStack/logScreen"); // Navigate to LogScreen within StockStack
+	};
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
@@ -35,85 +41,107 @@ export default function HomeScreen() {
 				colors={["#1a1a2e", "#16213e", "#0f3460"]}
 				style={styles.gradient}
 			>
-				{/* Header */}
-				<View style={styles.header}>
-					<Text style={styles.greeting}>Selamat Datang</Text>
-					<Text style={styles.appName}>CashierPro</Text>
-				</View>
-
-				{/* Logo Section */}
-				<View style={styles.logoContainer}>
-					<View style={styles.logoBackground}>
-						<Ionicons name="storefront" size={80} color="#00d4ff" />
+				<ScrollView contentContainerStyle={styles.scrollViewContent}>
+					{/* Header */}
+					<View style={styles.header}>
+						<Text style={styles.greeting}>Selamat Datang</Text>
+						<Text style={styles.appName}>CashierPro</Text>
 					</View>
-					<Text style={styles.logoText}>Kasir Digital</Text>
-					<Text style={styles.logoSubtext}>
-						Solusi Modern untuk Bisnis Anda
-					</Text>
-				</View>
 
-				{/* Main Actions */}
-				<View style={styles.actionsContainer}>
-					{/* Transaction Button */}
-					<TouchableOpacity
-						style={styles.primaryButton}
-						onPress={handleStartTransaction}
-						activeOpacity={0.8}
-					>
-						<LinearGradient
-							colors={["#00d4ff", "#0099cc"]}
-							style={styles.buttonGradient}
+					{/* Logo Section */}
+					<View style={styles.logoContainer}>
+						<View style={styles.logoBackground}>
+							<Ionicons name="storefront" size={80} color="#00d4ff" />
+						</View>
+						<Text style={styles.logoText}>Kasir Digital</Text>
+						<Text style={styles.logoSubtext}>
+							Solusi Modern untuk Bisnis Anda
+						</Text>
+					</View>
+
+					{/* Main Actions */}
+					<View style={styles.actionsContainer}>
+						{/* Transaction Button */}
+						<TouchableOpacity
+							style={styles.primaryButton}
+							onPress={handleStartTransaction}
+							activeOpacity={0.8}
 						>
-							<Ionicons name="card" size={32} color="white" />
-							<Text style={styles.primaryButtonText}>Mulai Transaksi</Text>
-							<Text style={styles.buttonSubtext}>Proses penjualan baru</Text>
-						</LinearGradient>
-					</TouchableOpacity>
+							<LinearGradient
+								colors={["#00d4ff", "#0099cc"]}
+								style={styles.buttonGradient}
+							>
+								<Ionicons name="card" size={32} color="white" />
+								<Text style={styles.primaryButtonText}>Mulai Transaksi</Text>
+								<Text style={styles.buttonSubtext}>Proses penjualan baru</Text>
+							</LinearGradient>
+						</TouchableOpacity>
 
-					{/* Stock Management Button */}
-					<TouchableOpacity
-						style={styles.secondaryButton}
-						onPress={handleManageStock}
-						activeOpacity={0.8}
-					>
-						<View style={styles.secondaryButtonContent}>
-							<View style={styles.iconContainer}>
-								<Ionicons name="cube" size={28} color="#00d4ff" />
+						{/* Stock Management Button */}
+						<TouchableOpacity
+							style={styles.secondaryButton}
+							onPress={handleManageStock}
+							activeOpacity={0.8}
+						>
+							<View style={styles.secondaryButtonContent}>
+								<View style={styles.iconContainer}>
+									<Ionicons name="cube" size={28} color="#00d4ff" />
+								</View>
+								<View style={styles.buttonTextContainer}>
+									<Text style={styles.secondaryButtonText}>Manajemen Stok</Text>
+									<Text style={styles.secondaryButtonSubtext}>
+										Kelola inventori barang
+									</Text>
+								</View>
+								<Ionicons name="chevron-forward" size={24} color="#00d4ff" />
 							</View>
-							<View style={styles.buttonTextContainer}>
-								<Text style={styles.secondaryButtonText}>Manajemen Stok</Text>
-								<Text style={styles.secondaryButtonSubtext}>
-									Kelola inventori barang
-								</Text>
-							</View>
-							<Ionicons name="chevron-forward" size={24} color="#00d4ff" />
-						</View>
-					</TouchableOpacity>
-				</View>
+						</TouchableOpacity>
 
-				{/* Quick Stats */}
-				<View style={styles.statsContainer}>
-					<View style={styles.statsRow}>
-						<View style={styles.statItem}>
-							<Ionicons name="trending-up" size={24} color="#4CAF50" />
-							<Text style={styles.statNumber}>142</Text>
-							<Text style={styles.statLabel}>Transaksi Hari Ini</Text>
-						</View>
-						<View style={styles.statDivider} />
-						<View style={styles.statItem}>
-							<Ionicons name="wallet" size={24} color="#FF9800" />
-							<Text style={styles.statNumber}>Rp 2.5M</Text>
-							<Text style={styles.statLabel}>Total Penjualan</Text>
+						{/* View Logs Button */}
+						<TouchableOpacity
+							style={styles.secondaryButton}
+							onPress={handleViewLogs}
+							activeOpacity={0.8}
+						>
+							<View style={styles.secondaryButtonContent}>
+								<View style={styles.iconContainer}>
+									<Ionicons name="receipt" size={28} color="#00d4ff" />
+								</View>
+								<View style={styles.buttonTextContainer}>
+									<Text style={styles.secondaryButtonText}>Lihat Log</Text>
+									<Text style={styles.secondaryButtonSubtext}>
+										Lihat riwayat penambahan stok
+									</Text>
+								</View>
+								<Ionicons name="chevron-forward" size={24} color="#00d4ff" />
+							</View>
+						</TouchableOpacity>
+					</View>
+
+					{/* Quick Stats */}
+					<View style={styles.statsContainer}>
+						<View style={styles.statsRow}>
+							<View style={styles.statItem}>
+								<Ionicons name="trending-up" size={24} color="#4CAF50" />
+								<Text style={styles.statNumber}>142</Text>
+								<Text style={styles.statLabel}>Transaksi Hari Ini</Text>
+							</View>
+							<View style={styles.statDivider} />
+							<View style={styles.statItem}>
+								<Ionicons name="wallet" size={24} color="#FF9800" />
+								<Text style={styles.statNumber}>Rp 2.5M</Text>
+								<Text style={styles.statLabel}>Total Penjualan</Text>
+							</View>
 						</View>
 					</View>
-				</View>
 
-				{/* Footer */}
-				<View style={styles.footer}>
-					<Text style={styles.footerText}>
-						© 2024 CashierPro - Powered by Expo Router
-					</Text>
-				</View>
+					{/* Footer */}
+					<View style={styles.footer}>
+						<Text style={styles.footerText}>
+							© 2024 CashierPro - Powered by Expo Router
+						</Text>
+					</View>
+				</ScrollView>
 			</LinearGradient>
 		</SafeAreaView>
 	);
@@ -127,6 +155,10 @@ const styles = StyleSheet.create({
 	gradient: {
 		flex: 1,
 		paddingHorizontal: 20,
+	},
+	scrollViewContent: {
+		flexGrow: 1, // Allows content to grow and enable scrolling
+		justifyContent: "space-between", // Distributes space between items
 	},
 	header: {
 		alignItems: "center",
@@ -171,7 +203,7 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 	actionsContainer: {
-		flex: 1,
+		// flex: 1, // Removed flex: 1 to allow ScrollView to manage height
 		justifyContent: "center",
 		paddingVertical: 20,
 	},
@@ -207,6 +239,7 @@ const styles = StyleSheet.create({
 		borderRadius: 16,
 		borderWidth: 1,
 		borderColor: "rgba(0, 212, 255, 0.3)",
+		marginBottom: 10, // Added margin for spacing between secondary buttons
 	},
 	secondaryButtonContent: {
 		flexDirection: "row",

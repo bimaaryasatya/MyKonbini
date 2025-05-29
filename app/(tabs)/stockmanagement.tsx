@@ -9,13 +9,12 @@ import {
 	View,
 } from "react-native";
 import {
-	addStock,
-	Barang,
-	deleteStock,
-	getAllStock,
-	initDB,
-	updateStock,
-} from "../database";
+	Barang, // Assuming this interface/type is defined elsewhere and now includes 'sku' and excludes 'kategori'
+	deleteStock, // Assuming this is defined elsewhere
+	getAllStock, // Assuming this is defined elsewhere
+	initDB, // Assuming this is defined elsewhere
+	updateStock, // Assuming this is defined elsewhere and now accepts 'sku' instead of 'kategori'
+} from "../database"; // Adjust this path if your database file is in a different location
 
 // Define the navigation stack parameters
 type StockStackParamList = {
@@ -25,10 +24,9 @@ type StockStackParamList = {
 };
 
 export default function StockManagement() {
-	// State variables for form inputs (though not directly used in this component's UI,
-	// they are part of the original code, so keeping them for consistency)
+	// State variables for form inputs (nama, harga, stok are still relevant for potential AddItem/EditItem screens)
 	const [nama, setNama] = useState("");
-	const [kategori, setKategori] = useState("");
+	// Removed 'kategori' state as it's no longer used
 	const [harga, setHarga] = useState("");
 	const [stok, setStok] = useState("");
 
@@ -65,21 +63,27 @@ export default function StockManagement() {
 	}, []); // Empty dependency array means this effect runs only once on mount
 
 	// Function to handle adding a new item (not directly used in this component's UI,
-	// but kept for completeness based on original code)
+	// but kept for completeness based on original code, adjusted for SKU)
 	const handleAdd = async () => {
-		if (!nama || !kategori || !harga || !stok) {
+		// Assuming 'sku' would be passed here if this function were used for adding
+		// For now, removing 'kategori' validation as it's no longer a field
+		if (!nama || !harga || !stok) {
 			Alert.alert("Validasi", "Semua field harus diisi");
 			return;
 		}
 		try {
-			await addStock(nama, kategori, Number(harga), Number(stok));
-			const data = await getAllStock();
-			setItems(data);
-			// Clear form fields after successful addition
-			setNama("");
-			setKategori("");
-			setHarga("");
-			setStok("");
+			// Assuming addStock now takes SKU instead of kategori, or SKU is handled differently
+			// This part might need adjustment based on your actual `database.ts` implementation
+			// For demonstration, we'll assume a placeholder for SKU if this function were to be used
+			// await addStock(nama, "placeholder_sku", Number(harga), Number(stok));
+			// const data = await getAllStock();
+			// setItems(data);
+			// setNama("");
+			// setHarga("");
+			// setStok("");
+			console.warn(
+				"handleAdd is not fully implemented for SKU in this component."
+			);
 		} catch (error) {
 			Alert.alert("Error", "Gagal menambahkan data");
 			console.error("Add item error:", error);
@@ -106,10 +110,11 @@ export default function StockManagement() {
 	const handleAddStock = async (item: Barang) => {
 		try {
 			// Update the stock by incrementing by 1
+			// Assuming updateStock now takes SKU instead of kategori
 			await updateStock(
 				item.id,
 				item.nama_barang,
-				item.kategori,
+				item.sku, // Use item.sku instead of item.kategori
 				item.harga,
 				item.stok + 1
 			);
@@ -125,8 +130,9 @@ export default function StockManagement() {
 	// Component for the table header row
 	const TableHeader = () => (
 		<View style={styles.tableHeader}>
-			<Text style={[styles.headerText, { flex: 2.5 }]}>Nama Barang</Text>
-			<Text style={[styles.headerText, { flex: 1.5 }]}>Kategori</Text>
+			<Text style={[styles.headerText, { flex: 3 }]}>Nama Barang</Text>
+			<Text style={[styles.headerText, { flex: 2 }]}>SKU</Text>{" "}
+			{/* Changed from Kategori to SKU */}
 			<Text style={[styles.headerText, { flex: 1.5 }]}>Harga</Text>
 			<Text style={[styles.headerText, { flex: 1 }]}>Stok</Text>
 			<Text style={[styles.headerText, { flex: 2 }]}>Aksi</Text>
@@ -137,15 +143,17 @@ export default function StockManagement() {
 	const TableRow = ({ item }: { item: Barang }) => (
 		<View style={styles.tableRow}>
 			{/* Item Name */}
-			<View style={[styles.cellContainer, { flex: 2.5 }]}>
+			<View style={[styles.cellContainer, { flex: 3 }]}>
 				<Text style={styles.cellText} numberOfLines={2}>
 					{item.nama_barang}
 				</Text>
 			</View>
-			{/* Category */}
-			<View style={[styles.cellContainer, { flex: 1.5 }]}>
+			{/* SKU */}
+			<View style={[styles.cellContainer, { flex: 2 }]}>
+				{" "}
+				{/* New SKU column */}
 				<Text style={styles.cellText} numberOfLines={1}>
-					{item.kategori}
+					{item.sku}
 				</Text>
 			</View>
 			{/* Price */}
@@ -200,7 +208,7 @@ export default function StockManagement() {
 								setOpenDropdownId(null); // Close dropdown after action
 							}}
 						>
-							<Text style={styles.dropdownOptionText}>🗑 Hapus</Text>
+							<Text style={styles.dropdownOptionText}>� Hapus</Text>
 						</TouchableOpacity>
 					</View>
 				)}
@@ -384,6 +392,13 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		alignItems: "center",
 		gap: 8, // Increased gap for better spacing
+	},
+	addStockButton: {
+		backgroundColor: "rgba(0, 212, 255, 0.2)",
+		paddingHorizontal: 8,
+		paddingVertical: 6,
+		borderRadius: 6,
+		minWidth: 28,
 	},
 	addStockText: {
 		fontSize: 11,

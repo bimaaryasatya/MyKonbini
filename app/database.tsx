@@ -6,9 +6,18 @@ const db = SQLite.openDatabaseSync("inventory.db");
 export interface Barang {
 	id: number;
 	nama_barang: string;
-	kategori: string;
+	sku: string; // Mengganti 'kategori' dengan 'sku'
 	harga: number;
 	stok: number;
+}
+
+// Tipe entri log untuk penambahan barang
+export interface LogEntry {
+	id: number;
+	nama_barang: string;
+	sku: string;
+	jumlah_ditambah: number;
+	timestamp: string; // ISO 8601 string for datetime
 }
 
 // Inisialisasi tabel
@@ -18,13 +27,23 @@ export const initDB = async (): Promise<void> => {
       CREATE TABLE IF NOT EXISTS barang (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nama_barang TEXT NOT NULL,
-        kategori TEXT NOT NULL,
+        sku TEXT NOT NULL, -- Mengganti 'kategori' dengan 'sku'
         harga INTEGER NOT NULL,
         stok INTEGER NOT NULL
       );
     `);
+		// Tabel baru untuk log penambahan barang
+		await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_barang TEXT NOT NULL,
+        sku TEXT NOT NULL,
+        jumlah_ditambah INTEGER NOT NULL,
+        timestamp TEXT NOT NULL
+      );
+    `);
 	} catch (error) {
-		console.error("Error creating table:", error);
+		console.error("Error creating tables:", error);
 		throw error;
 	}
 };
@@ -32,17 +51,35 @@ export const initDB = async (): Promise<void> => {
 // Tambah barang
 export const addStock = async (
 	nama_barang: string,
-	kategori: string,
+	sku: string, // Mengganti 'kategori' dengan 'sku'
 	harga: number,
 	stok: number
 ): Promise<void> => {
 	try {
 		await db.runAsync(
-			"INSERT INTO barang (nama_barang, kategori, harga, stok) VALUES (?, ?, ?, ?);",
-			[nama_barang, kategori, harga, stok]
+			"INSERT INTO barang (nama_barang, sku, harga, stok) VALUES (?, ?, ?, ?);", // Mengganti 'kategori' dengan 'sku' di query
+			[nama_barang, sku, harga, stok]
 		);
 	} catch (error) {
 		console.error("Error insert:", error);
+		throw error;
+	}
+};
+
+// Tambah entri log
+export const addLogEntry = async (
+	nama_barang: string,
+	sku: string,
+	jumlah_ditambah: number,
+	timestamp: string
+): Promise<void> => {
+	try {
+		await db.runAsync(
+			"INSERT INTO log (nama_barang, sku, jumlah_ditambah, timestamp) VALUES (?, ?, ?, ?);",
+			[nama_barang, sku, jumlah_ditambah, timestamp]
+		);
+	} catch (error) {
+		console.error("Error inserting log entry:", error);
 		throw error;
 	}
 };
@@ -58,18 +95,32 @@ export const getAllStock = async (): Promise<Barang[]> => {
 	}
 };
 
+// Ambil semua entri log
+export const getLogEntries = async (): Promise<LogEntry[]> => {
+	try {
+		// Mengambil log dan mengurutkannya berdasarkan timestamp terbaru
+		const result = await db.getAllAsync<LogEntry>(
+			"SELECT * FROM log ORDER BY timestamp DESC;"
+		);
+		return result;
+	} catch (error) {
+		console.error("Error fetching log entries:", error);
+		throw error;
+	}
+};
+
 // Update barang
 export const updateStock = async (
 	id: number,
 	nama_barang: string,
-	kategori: string,
+	sku: string, // Mengganti 'kategori' dengan 'sku'
 	harga: number,
 	stok: number
 ): Promise<void> => {
 	try {
 		await db.runAsync(
-			"UPDATE barang SET nama_barang = ?, kategori = ?, harga = ?, stok = ? WHERE id = ?;",
-			[nama_barang, kategori, harga, stok, id]
+			"UPDATE barang SET nama_barang = ?, sku = ?, harga = ?, stok = ? WHERE id = ?;", // Mengganti 'kategori' dengan 'sku' di query
+			[nama_barang, sku, harga, stok, id]
 		);
 	} catch (error) {
 		console.error("Error update:", error);
