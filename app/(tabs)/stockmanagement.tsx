@@ -14,7 +14,7 @@ import {
 	getAllStock, // Assuming this is defined elsewhere
 	initDB, // Assuming this is defined elsewhere
 	updateStock, // Assuming this is defined elsewhere and now accepts 'sku' instead of 'kategori'
-} from "../database"; // Adjust this path if your database file is in a different location
+} from "../database";
 
 // Define the navigation stack parameters
 type StockStackParamList = {
@@ -191,7 +191,7 @@ export default function StockManagement() {
 								setOpenDropdownId(null); // Close dropdown after action
 							}}
 						>
-							<Text style={styles.dropdownOptionText}>✏ Edit</Text>
+							<Text style={styles.dropdownOptionText}>✏️ Edit</Text>
 						</TouchableOpacity>
 						{/* Delete Option */}
 						<TouchableOpacity
@@ -208,7 +208,7 @@ export default function StockManagement() {
 								setOpenDropdownId(null); // Close dropdown after action
 							}}
 						>
-							<Text style={styles.dropdownOptionText}>� Hapus</Text>
+							<Text style={styles.dropdownOptionText}>🗑️ Hapus</Text>
 						</TouchableOpacity>
 					</View>
 				)}
