@@ -158,3 +158,16 @@ export const deleteStock = async (id: number): Promise<void> => {
     throw error;
   }
 };
+
+export const getItemBySku = async (sku: string): Promise<Barang | null> => {
+  try {
+    const result = await db.getFirstAsync<Barang>(
+      "SELECT * FROM barang WHERE sku = ?;",
+      [sku]
+    );
+    return result || null;
+  } catch (error) {
+    console.error("Error fetching item by SKU:", error);
+    throw error;
+  }
+};
