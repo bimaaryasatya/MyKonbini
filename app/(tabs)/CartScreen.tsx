@@ -1,25 +1,39 @@
 // screens/CartScreen.tsx
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import {
+	useFocusEffect,
+	useNavigation,
+	useRoute,
+	type NavigationProp,
+	type RouteProp,
+} from "@react-navigation/native";
 import React, { useCallback, useState } from "react";
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+	Alert,
+	FlatList,
+	KeyboardAvoidingView,
+	Platform,
+	SafeAreaView,
+	StatusBar,
+	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
-import { addLogEntry, getItemBySku, updateStock } from "../database"; // Import necessary functions
-import { CartItem } from "./TransactionScreen"; // Import CartItem interface
+import { addLogEntry, getItemBySku, updateStock } from "../database";
+import { RootStackParamList } from "./StockStack"; // Import RootStackParamList
+import { CartItem } from "./TransactionScreen";
+
+// Define the types for the navigation and route props in this screen
+type CartScreenRouteProp = RouteProp<RootStackParamList, "CartScreen">;
+type CartScreenNavigationProp = NavigationProp<
+	RootStackParamList,
+	"CartScreen"
+>;
 
 export default function CartScreen() {
-	const navigation = useNavigation();
-	const route = useRoute();
+	const navigation = useNavigation<CartScreenNavigationProp>(); // Type the navigation hook
+	const route = useRoute<CartScreenRouteProp>(); // Type the route hook
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
 	const [cashReceived, setCashReceived] = useState("");
 	const [change, setChange] = useState(0);
@@ -27,15 +41,16 @@ export default function CartScreen() {
 	useFocusEffect(
 		useCallback(() => {
 			if (route.params?.cartItems) {
-				setCartItems(route.params.cartItems as CartItem[]);
+				// Now TypeScript knows route.params has cartItems
+				setCartItems(route.params.cartItems); // No need for 'as CartItem[]'
 			}
-		}, [route.params?.cartItems]),
+		}, [route.params?.cartItems])
 	);
 
 	const calculateTotalPrice = () => {
 		return cartItems.reduce(
 			(total, item) => total + item.harga * item.quantity,
-			0,
+			0
 		);
 	};
 
@@ -48,7 +63,6 @@ export default function CartScreen() {
 		const quantity = parseInt(newQuantity);
 
 		if (isNaN(quantity) || quantity < 0) {
-			// Don't update if input is invalid
 			return;
 		}
 
@@ -73,7 +87,7 @@ export default function CartScreen() {
 							setCartItems(updatedCart);
 						},
 					},
-				],
+				]
 			);
 		} else {
 			updatedCart[index].quantity = quantity;
@@ -95,7 +109,7 @@ export default function CartScreen() {
 						setCartItems(updatedCart);
 					},
 				},
-			],
+			]
 		);
 	};
 
@@ -120,7 +134,6 @@ export default function CartScreen() {
 		}
 
 		try {
-			// Update stock and log transactions
 			for (const item of cartItems) {
 				const currentItem = await getItemBySku(item.sku);
 				if (currentItem) {
@@ -130,21 +143,20 @@ export default function CartScreen() {
 						currentItem.nama_barang,
 						currentItem.sku,
 						currentItem.harga,
-						newStok,
+						newStok
 					);
-					// Log the transaction (stock decrement)
 					await addLogEntry(
 						item.nama_barang,
 						item.sku,
-						-item.quantity, // Negative for decrement
-						new Date().toISOString(),
+						-item.quantity,
+						new Date().toISOString()
 					);
 				}
 			}
 
 			Alert.alert("Berhasil!", "Transaksi berhasil diselesaikan.");
-			// Navigate to receipt screen
 			navigation.navigate("ReceiptScreen", {
+				// This line is now correctly typed
 				transactionDetails: {
 					date: new Date().toISOString(),
 					items: cartItems,
@@ -154,7 +166,6 @@ export default function CartScreen() {
 				},
 			});
 
-			// Clear cart after successful checkout
 			setCartItems([]);
 			setCashReceived("");
 			setChange(0);
@@ -242,7 +253,10 @@ export default function CartScreen() {
 						</Text>
 					</View>
 
-					<TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
+					<TouchableOpacity
+						style={styles.checkoutButton}
+						onPress={handleCheckout}
+					>
 						<Text style={styles.checkoutButtonText}>Bayar / Checkout</Text>
 					</TouchableOpacity>
 				</View>
@@ -255,6 +269,7 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		marginTop: StatusBar.currentHeight || 0,
+		marginBottom: 16 + (StatusBar.currentHeight ?? 0), // Adjust for status bar height
 		backgroundColor: "#0f1419",
 	},
 	keyboardAvoidingContainer: {

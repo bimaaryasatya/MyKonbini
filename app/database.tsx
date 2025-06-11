@@ -25,24 +25,24 @@ export interface LogEntry {
 export const initDB = async (): Promise<void> => {
 	try {
 		await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS barang (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nama_barang TEXT NOT NULL,
-        sku TEXT NOT NULL, -- Mengganti 'kategori' dengan 'sku'
-        harga INTEGER NOT NULL,
-        stok INTEGER NOT NULL
-      );
-    `);
+    CREATE TABLE IF NOT EXISTS barang (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama_barang TEXT NOT NULL,
+    sku TEXT NOT NULL,
+    harga INTEGER NOT NULL,
+    stok INTEGER NOT NULL
+    );
+  `);
 		// Tabel baru untuk log penambahan barang
 		await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nama_barang TEXT NOT NULL,
-        sku TEXT NOT NULL,
-        jumlah_ditambah INTEGER NOT NULL,
-        timestamp TEXT NOT NULL
-      );
-    `);
+    CREATE TABLE IF NOT EXISTS log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama_barang TEXT NOT NULL,
+    sku TEXT NOT NULL,
+    jumlah_ditambah INTEGER NOT NULL,
+    timestamp TEXT NOT NULL
+    );
+  `);
 	} catch (error) {
 		console.error("Error creating tables:", error);
 		throw error;
@@ -54,12 +54,12 @@ export const addStock = async (
 	nama_barang: string,
 	sku: string, // Mengganti 'kategori' dengan 'sku'
 	harga: number,
-	stok: number,
+	stok: number
 ): Promise<void> => {
 	try {
 		await db.runAsync(
 			"INSERT INTO barang (nama_barang, sku, harga, stok) VALUES (?, ?, ?, ?);", // Mengganti 'kategori' dengan 'sku' di query
-			[nama_barang, sku, harga, stok],
+			[nama_barang, sku, harga, stok]
 		);
 		// Log the initial addition of stock
 		await addLogEntry(nama_barang, sku, stok, new Date().toISOString());
@@ -74,12 +74,12 @@ export const addLogEntry = async (
 	nama_barang: string,
 	sku: string,
 	jumlah_ditambah: number,
-	timestamp: string,
+	timestamp: string
 ): Promise<void> => {
 	try {
 		await db.runAsync(
 			"INSERT INTO log (nama_barang, sku, jumlah_ditambah, timestamp) VALUES (?, ?, ?, ?);",
-			[nama_barang, sku, jumlah_ditambah, timestamp],
+			[nama_barang, sku, jumlah_ditambah, timestamp]
 		);
 	} catch (error) {
 		console.error("Error inserting log entry:", error);
@@ -103,7 +103,7 @@ export const getLogEntries = async (): Promise<LogEntry[]> => {
 	try {
 		// Mengambil log dan mengurutkannya berdasarkan timestamp terbaru
 		const result = await db.getAllAsync<LogEntry>(
-			"SELECT * FROM log ORDER BY timestamp DESC;",
+			"SELECT * FROM log ORDER BY timestamp DESC;"
 		);
 		return result;
 	} catch (error) {
@@ -118,20 +118,20 @@ export const updateStock = async (
 	nama_barang: string,
 	sku: string, // Mengganti 'kategori' dengan 'sku'
 	harga: number,
-	newStok: number, // Renamed to newStok to avoid conflict
+	newStok: number // Renamed to newStok to avoid conflict
 ): Promise<void> => {
 	try {
 		// Get the current stock value to calculate the difference
 		const currentItem = await db.getFirstAsync<Barang>(
 			"SELECT stok FROM barang WHERE id = ?;",
-			[id],
+			[id]
 		);
 		const oldStok = currentItem ? currentItem.stok : 0;
 		const stockDifference = newStok - oldStok;
 
 		await db.runAsync(
 			"UPDATE barang SET nama_barang = ?, sku = ?, harga = ?, stok = ? WHERE id = ?;", // Mengganti 'kategori' dengan 'sku' di query
-			[nama_barang, sku, harga, newStok, id],
+			[nama_barang, sku, harga, newStok, id]
 		);
 
 		// Log the stock change if there's a difference
@@ -140,7 +140,7 @@ export const updateStock = async (
 				nama_barang,
 				sku,
 				stockDifference,
-				new Date().toISOString(),
+				new Date().toISOString()
 			);
 		}
 	} catch (error) {
@@ -163,11 +163,23 @@ export const getItemBySku = async (sku: string): Promise<Barang | null> => {
 	try {
 		const result = await db.getFirstAsync<Barang>(
 			"SELECT * FROM barang WHERE sku = ?;",
-			[sku],
+			[sku]
 		);
 		return result || null;
 	} catch (error) {
 		console.error("Error fetching item by SKU:", error);
 		throw error;
 	}
+};
+
+// Default export
+export default {
+	initDB,
+	addStock,
+	addLogEntry,
+	getAllStock,
+	getLogEntries,
+	updateStock,
+	deleteStock,
+	getItemBySku,
 };

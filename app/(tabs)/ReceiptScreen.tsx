@@ -1,29 +1,31 @@
 // screens/ReceiptScreen.tsx
-import { useNavigation, useRoute } from "@react-navigation/native";
+import {
+	useNavigation,
+	useRoute,
+	type RouteProp,
+} from "@react-navigation/native";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import React from "react";
 import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+	Alert,
+	SafeAreaView,
+	ScrollView,
+	StatusBar,
+	StyleSheet,
+	Text,
+	TouchableOpacity,
+	View,
 } from "react-native";
+import { RootStackParamList } from "./StockStack"; // Import RootStackParamList
+import { CartItem } from "./TransactionScreen"; // Import CartItem for type consistency
+
+// Define the type for the route prop in this screen
+type ReceiptScreenRouteProp = RouteProp<RootStackParamList, "ReceiptScreen">;
 
 interface TransactionDetails {
 	date: string;
-	items: {
-		id: number;
-		nama_barang: string;
-		sku: string;
-		harga: number;
-		stok: number; // This 'stok' is the original stock, not the purchased quantity
-		quantity: number; // This is the purchased quantity
-	}[];
+	items: CartItem[]; // Use CartItem for consistency
 	totalPrice: number;
 	cashReceived: number;
 	change: number;
@@ -31,10 +33,8 @@ interface TransactionDetails {
 
 export default function ReceiptScreen() {
 	const navigation = useNavigation();
-	const route = useRoute();
-	const { transactionDetails } = route.params as {
-		transactionDetails: TransactionDetails;
-	};
+	const route = useRoute<ReceiptScreenRouteProp>(); // Type the route hook
+	const { transactionDetails } = route.params; // Now TypeScript knows transactionDetails exists and its type
 
 	const generateReceiptHtml = (details: TransactionDetails) => {
 		const formattedDate = new Date(details.date).toLocaleString("id-ID", {
@@ -49,12 +49,20 @@ export default function ReceiptScreen() {
 			.map(
 				(item) => `
       <tr style="border-bottom: 1px dashed #ddd;">
-        <td style="padding: 8px 0; text-align: left; font-size: 14px;">${item.nama_barang}</td>
-        <td style="padding: 8px 0; text-align: center; font-size: 14px;">${item.quantity}</td>
-        <td style="padding: 8px 0; text-align: right; font-size: 14px;">Rp ${item.harga.toLocaleString("id-ID")}</td>
-        <td style="padding: 8px 0; text-align: right; font-size: 14px;">Rp ${(item.harga * item.quantity).toLocaleString("id-ID")}</td>
+        <td style="padding: 8px 0; text-align: left; font-size: 14px;">${
+					item.nama_barang
+				}</td>
+        <td style="padding: 8px 0; text-align: center; font-size: 14px;">${
+					item.quantity
+				}</td>
+        <td style="padding: 8px 0; text-align: right; font-size: 14px;">Rp ${item.harga.toLocaleString(
+					"id-ID"
+				)}</td>
+        <td style="padding: 8px 0; text-align: right; font-size: 14px;">Rp ${(
+					item.harga * item.quantity
+				).toLocaleString("id-ID")}</td>
       </tr>
-    `,
+    `
 			)
 			.join("");
 
@@ -64,7 +72,10 @@ export default function ReceiptScreen() {
 
       <div style="border-top: 1px dashed #ddd; border-bottom: 1px dashed #ddd; padding: 10px 0; margin-bottom: 20px;">
         <p style="font-size: 14px; margin: 5px 0;"><strong>Tanggal:</strong> ${formattedDate}</p>
-        <p style="font-size: 14px; margin: 5px 0;"><strong>Total Item:</strong> ${details.items.reduce((sum, item) => sum + item.quantity, 0)}</p>
+        <p style="font-size: 14px; margin: 5px 0;"><strong>Total Item:</strong> ${details.items.reduce(
+					(sum, item) => sum + item.quantity,
+					0
+				)}</p>
       </div>
 
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
@@ -82,9 +93,15 @@ export default function ReceiptScreen() {
       </table>
 
       <div style="text-align: right; margin-top: 20px;">
-        <p style="font-size: 16px; margin: 5px 0;"><strong>Total Harga:</strong> Rp ${details.totalPrice.toLocaleString("id-ID")}</p>
-        <p style="font-size: 16px; margin: 5px 0;"><strong>Uang Diberikan:</strong> Rp ${details.cashReceived.toLocaleString("id-ID")}</p>
-        <p style="font-size: 16px; margin: 5px 0;"><strong>Kembalian:</strong> Rp ${details.change.toLocaleString("id-ID")}</p>
+        <p style="font-size: 16px; margin: 5px 0;"><strong>Total Harga:</strong> Rp ${details.totalPrice.toLocaleString(
+					"id-ID"
+				)}</p>
+        <p style="font-size: 16px; margin: 5px 0;"><strong>Uang Diberikan:</strong> Rp ${details.cashReceived.toLocaleString(
+					"id-ID"
+				)}</p>
+        <p style="font-size: 16px; margin: 5px 0;"><strong>Kembalian:</strong> Rp ${details.change.toLocaleString(
+					"id-ID"
+				)}</p>
       </div>
 
       <p style="text-align: center; margin-top: 40px; color: #666; font-size: 12px;">Terima kasih telah berbelanja!</p>
@@ -107,7 +124,10 @@ export default function ReceiptScreen() {
 			const { uri } = await Print.printToFileAsync({ html });
 
 			if (uri) {
-				await Sharing.shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
+				await Sharing.shareAsync(uri, {
+					UTI: ".pdf",
+					mimeType: "application/pdf",
+				});
 			}
 		} catch (error) {
 			console.error("Error sharing PDF:", error);
@@ -145,13 +165,11 @@ export default function ReceiptScreen() {
 				{
 					text: "Hapus",
 					onPress: () => {
-						// In a real application, you might have a backend or more complex state management
-						// to truly "delete" a receipt. For this demo, it just navigates back.
 						Alert.alert("Struk Dihapus", "Struk telah dihapus.");
-						navigation.goBack(); // Go back to the CartScreen or Home
+						navigation.goBack();
 					},
 				},
-			],
+			]
 		);
 	};
 
@@ -160,7 +178,7 @@ export default function ReceiptScreen() {
 			<StatusBar barStyle="light-content" backgroundColor="#0f1419" />
 			<ScrollView contentContainerStyle={styles.scrollViewContent}>
 				<View style={styles.receiptCard}>
-					<Text style={styles.appName}>CashierPro</Text>
+					<Text style={styles.appName}>Toko Annaya Tegal</Text>
 					<Text style={styles.receiptTitle}>Struk Pembelian</Text>
 					<View style={styles.divider} />
 
@@ -225,7 +243,10 @@ export default function ReceiptScreen() {
 					>
 						<Text style={styles.actionButtonText}>Bagikan PDF</Text>
 					</TouchableOpacity>
-					<TouchableOpacity style={styles.actionButton} onPress={savePdfReceipt}>
+					<TouchableOpacity
+						style={styles.actionButton}
+						onPress={savePdfReceipt}
+					>
 						<Text style={styles.actionButtonText}>Simpan PDF</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
@@ -244,6 +265,7 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		marginTop: StatusBar.currentHeight || 0,
+		marginBottom: 15 + (StatusBar.currentHeight || 0), // Add some space at the bottom
 		backgroundColor: "#0f1419",
 	},
 	scrollViewContent: {

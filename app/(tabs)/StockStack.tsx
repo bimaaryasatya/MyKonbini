@@ -1,15 +1,40 @@
 // StockStack.tsx
-import { createStackNavigator } from "@react-navigation/stack";
+import {
+	createStackNavigator,
+	StackNavigationProp,
+} from "@react-navigation/stack";
 import React from "react";
 import AddItemScreen from "./AddItemScreen";
-import CartScreen from "./CartScreen"; // New Import
+import CartScreen from "./CartScreen";
 import EditItemScreen from "./EditItemScreen";
 import LogScreen from "./logScreen";
-import ReceiptScreen from "./ReceiptScreen"; // New Import
+import ReceiptScreen from "./ReceiptScreen";
 import StockManagement from "./stockmanagement";
-import TransactionScreen from "./TransactionScreen"; // New Import
+import TransactionScreen, { CartItem } from "./TransactionScreen"; // Import CartItem for typing
 
-const Stack = createStackNavigator();
+// Define the parameter list for your stack navigator
+export type RootStackParamList = {
+	StockManagement: undefined; // No parameters for StockManagement screen
+	AddItem: undefined; // No parameters for AddItem screen
+	EditItem: { itemId: number; itemSku: string }; // Example: EditItem expects an itemId and itemSku
+	LogScreen: undefined; // No parameters for LogScreen
+	TransactionScreen: undefined; // No parameters passed directly on initial navigation
+	CartScreen: { cartItems: CartItem[] }; // CartScreen expects an array of CartItem
+	ReceiptScreen: {
+		transactionDetails: {
+			date: string;
+			items: CartItem[];
+			totalPrice: number;
+			cashReceived: number;
+			change: number;
+		};
+	}; // ReceiptScreen expects transactionDetails
+};
+
+// You can also export a type for the navigation prop if needed elsewhere
+export type StockStackNavigationProp = StackNavigationProp<RootStackParamList>;
+
+const Stack = createStackNavigator<RootStackParamList>(); // Use RootStackParamList here
 
 export default function StockStack() {
 	return (
@@ -35,17 +60,17 @@ export default function StockStack() {
 				options={{ title: "Log Barang" }}
 			/>
 			<Stack.Screen
-				name="TransactionScreen" // New Screen
+				name="TransactionScreen"
 				component={TransactionScreen}
 				options={{ title: "Mulai Transaksi" }}
 			/>
 			<Stack.Screen
-				name="CartScreen" // New Screen
+				name="CartScreen"
 				component={CartScreen}
 				options={{ title: "Keranjang Belanja" }}
 			/>
 			<Stack.Screen
-				name="ReceiptScreen" // New Screen
+				name="ReceiptScreen"
 				component={ReceiptScreen}
 				options={{ title: "Struk Pembelian" }}
 			/>

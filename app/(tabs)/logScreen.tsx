@@ -1,4 +1,3 @@
-// screens/LogScreen.tsx
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
@@ -41,12 +40,20 @@ export default function LogScreen() {
 			.map(
 				(log) => `
       <tr style="border-bottom: 1px solid #eee;">
-        <td style="padding: 8px 0; text-align: left; font-size: 13px;">${log.nama_barang}</td>
-        <td style="padding: 8px 0; text-align: center; font-size: 13px;">${log.jumlah_ditambah}</td>
-        <td style="padding: 8px 0; text-align: center; font-size: 13px;">${log.sku}</td>
-        <td style="padding: 8px 0; text-align: right; font-size: 13px;">${new Date(log.timestamp).toLocaleString()}</td>
+        <td style="padding: 8px 0; text-align: left; font-size: 13px;">${
+					log.nama_barang
+				}</td>
+        <td style="padding: 8px 0; text-align: center; font-size: 13px;">${
+					log.jumlah_ditambah
+				}</td>
+        <td style="padding: 8px 0; text-align: center; font-size: 13px;">${
+					log.sku
+				}</td>
+        <td style="padding: 8px 0; text-align: right; font-size: 13px;">${new Date(
+					log.timestamp
+				).toLocaleString()}</td>
       </tr>
-    `,
+    `
 			)
 			.join("");
 
@@ -78,7 +85,10 @@ export default function LogScreen() {
 			const { uri } = await Print.printToFileAsync({ html });
 
 			if (uri) {
-				await Sharing.shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
+				await Sharing.shareAsync(uri, {
+					UTI: ".pdf",
+					mimeType: "application/pdf",
+				});
 			}
 		} catch (error) {
 			console.error("Error exporting logs to PDF:", error);

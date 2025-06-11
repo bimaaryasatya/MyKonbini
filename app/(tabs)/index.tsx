@@ -22,12 +22,12 @@ export default function HomeScreen() {
 
 	const handleStartTransaction = () => {
 		// Navigate ke halaman transaksi
-		router.push("./StockStack/TransactionScreen"); // Updated navigation
+		router.push("/TransactionScreen"); // Updated navigation
 	};
 
 	const handleViewLogs = () => {
 		// Navigate ke halaman log
-		router.push("./StockStack/LogScreen"); // Navigate to LogScreen within StockStack
+		router.push("/logScreen"); // Navigate to LogScreen within StockStack
 	};
 
 	return (
@@ -42,7 +42,7 @@ export default function HomeScreen() {
 					{/* Header */}
 					<View style={styles.header}>
 						<Text style={styles.greeting}>Selamat Datang</Text>
-						<Text style={styles.appName}>CashierPro</Text>
+						<Text style={styles.appName}>Toko Annaya Tegal</Text>
 					</View>
 
 					{/* Logo Section */}
