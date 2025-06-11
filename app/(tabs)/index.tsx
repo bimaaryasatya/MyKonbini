@@ -22,12 +22,12 @@ export default function HomeScreen() {
 
 	const handleStartTransaction = () => {
 		// Navigate ke halaman transaksi
-		router.push("/");
+		router.push("./StockStack/TransactionScreen"); // Updated navigation
 	};
 
 	const handleViewLogs = () => {
 		// Navigate ke halaman log
-		router.push("./logScreen"); // Navigate to LogScreen within StockStack
+		router.push("./StockStack/LogScreen"); // Navigate to LogScreen within StockStack
 	};
 
 	return (

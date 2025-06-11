@@ -36,18 +36,13 @@ export default function AddItemScreen() {
 	const [mutationAmount, setMutationAmount] = useState("");
 	const [namaBarangInput, setNamaBarangInput] = useState(""); // Untuk nama barang baru
 	const [hargaInput, setHargaInput] = useState(""); // Untuk harga barang baru
-
 	const [scanned, setScanned] = useState(false);
 	const [showScanner, setShowScanner] = useState(false);
 	const [showSkuInputModal, setShowSkuInputModal] = useState(false);
 	const [showMutationDetailModal, setShowMutationDetailModal] = useState(false);
-	const [showBatchConfirmationModal, setShowBatchConfirmationModal] =
-		useState(false);
-
+	const [showBatchConfirmationModal, setShowBatchConfirmationModal] = useState(false);
 	const [cameraPermission, requestPermission] = useCameraPermissions();
-
 	const navigation = useNavigation();
-
 	// State untuk menyimpan daftar barang yang akan dimutasi
 	const [itemsToMutate, setItemsToMutate] = useState<BarangMutasi[]>([]);
 	// State untuk item yang sedang diproses di modal mutasi

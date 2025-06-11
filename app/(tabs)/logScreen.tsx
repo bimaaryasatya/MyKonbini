@@ -1,4 +1,6 @@
 // screens/LogScreen.tsx
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
 import {
 	Alert,
@@ -8,6 +10,7 @@ import {
 	StatusBar,
 	StyleSheet,
 	Text,
+	TouchableOpacity,
 	View,
 } from "react-native";
 import { getLogEntries, LogEntry } from "../database"; // Import getLogEntries and LogEntry interface
@@ -33,6 +36,56 @@ export default function LogScreen() {
 		fetchLogs();
 	}, []);
 
+	const generateLogHtml = (logs: LogEntry[]) => {
+		let logRowsHtml = logs
+			.map(
+				(log) => `
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 8px 0; text-align: left; font-size: 13px;">${log.nama_barang}</td>
+        <td style="padding: 8px 0; text-align: center; font-size: 13px;">${log.jumlah_ditambah}</td>
+        <td style="padding: 8px 0; text-align: center; font-size: 13px;">${log.sku}</td>
+        <td style="padding: 8px 0; text-align: right; font-size: 13px;">${new Date(log.timestamp).toLocaleString()}</td>
+      </tr>
+    `,
+			)
+			.join("");
+
+		return `
+      <h1 style="text-align: center; color: #333; margin-bottom: 5px;">CashierPro Log</h1>
+      <p style="text-align: center; color: #666; font-size: 12px; margin-bottom: 20px;">Riwayat Penambahan/Pengurangan Stok</p>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr style="background-color: #f2f2f2;">
+            <th style="padding: 10px 0; text-align: left; font-size: 14px;">Nama Barang</th>
+            <th style="padding: 10px 0; text-align: center; font-size: 14px;">Jumlah</th>
+            <th style="padding: 10px 0; text-align: center; font-size: 14px;">SKU</th>
+            <th style="padding: 10px 0; text-align: right; font-size: 14px;">Tanggal & Waktu</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${logRowsHtml}
+        </tbody>
+      </table>
+
+      <p style="text-align: center; margin-top: 40px; color: #666; font-size: 12px;">Dibuat pada: ${new Date().toLocaleString()}</p>
+    `;
+	};
+
+	const exportLogsToPdf = async () => {
+		try {
+			const html = generateLogHtml(logEntries);
+			const { uri } = await Print.printToFileAsync({ html });
+
+			if (uri) {
+				await Sharing.shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
+			}
+		} catch (error) {
+			console.error("Error exporting logs to PDF:", error);
+			Alert.alert("Error", "Gagal mengekspor log sebagai PDF.");
+		}
+	};
+
 	const TableHeader = () => (
 		<View style={styles.tableHeader}>
 			<Text style={[styles.headerText, { flex: 3 }]}>Nama Barang</Text>
@@ -51,6 +104,7 @@ export default function LogScreen() {
 			</View>
 			<View style={[styles.cellContainer, { flex: 1.5 }]}>
 				<Text style={styles.cellText} numberOfLines={1}>
+					{item.jumlah_ditambah > 0 ? "+" : ""}
 					{item.jumlah_ditambah}
 				</Text>
 			</View>
@@ -104,6 +158,9 @@ export default function LogScreen() {
 					/>
 				</View>
 			</View>
+			<TouchableOpacity style={styles.exportButton} onPress={exportLogsToPdf}>
+				<Text style={styles.exportButtonText}>Ekspor Log ke PDF</Text>
+			</TouchableOpacity>
 		</SafeAreaView>
 	);
 }
@@ -205,5 +262,19 @@ const styles = StyleSheet.create({
 		color: "#b0b3b8",
 		fontSize: 16,
 		fontStyle: "italic",
+	},
+	exportButton: {
+		backgroundColor: "#00d4ff",
+		paddingVertical: 15,
+		marginHorizontal: 20,
+		borderRadius: 10,
+		alignItems: "center",
+		marginBottom: 20,
+		marginTop: 10,
+	},
+	exportButtonText: {
+		color: "white",
+		fontSize: 18,
+		fontWeight: "bold",
 	},
 });
