@@ -2,8 +2,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react"; // Pastikan useEffect dan useCallback ada
+import React, { useCallback, useEffect, useState } from "react";
 import {
+	Dimensions,
 	SafeAreaView,
 	ScrollView,
 	StatusBar,
@@ -17,9 +18,11 @@ import {
 	getExpenditureSummary,
 	getFinancialSummary,
 	initDB,
-} from "../database"; // Import getFinancialSummary dan initDB
+} from "../database";
 
-import { useFocusEffect } from "@react-navigation/native"; // Import useFocusEffect
+import { useFocusEffect } from "@react-navigation/native";
+
+const { width, height } = Dimensions.get("window");
 
 export default function HomeScreen() {
 	const [weeklyIncome, setWeeklyIncome] = useState<number | null>(null);
@@ -31,7 +34,6 @@ export default function HomeScreen() {
 		null
 	);
 
-	// Panggil initDB saat komponen pertama kali dimuat
 	useEffect(() => {
 		const initializeDatabase = async () => {
 			try {
@@ -39,12 +41,11 @@ export default function HomeScreen() {
 				console.log("Database initialized successfully.");
 			} catch (error) {
 				console.error("Failed to initialize database:", error);
-				// Anda bisa menambahkan Alert.alert di sini untuk memberi tahu pengguna jika ada masalah serius
 			}
 		};
 
 		initializeDatabase();
-	}, []); // Array dependensi kosong memastikan ini hanya berjalan sekali saat mount
+	}, []);
 
 	const fetchFinancialData = useCallback(async () => {
 		try {
@@ -58,14 +59,13 @@ export default function HomeScreen() {
 			setMonthlyExpenditure(monthlyExpenditure);
 		} catch (error) {
 			console.error("Error fetching financial data:", error);
-			setWeeklyIncome(0); // Set to 0 if there's an error
-			setMonthlyIncome(0); // Set to 0 if there's an error
+			setWeeklyIncome(0);
+			setMonthlyIncome(0);
 			setWeeklyExpenditure(0);
 			setMonthlyExpenditure(0);
 		}
 	}, []);
 
-	// Use useFocusEffect to refresh data when screen comes into focus
 	useFocusEffect(
 		useCallback(() => {
 			fetchFinancialData();
@@ -73,120 +73,175 @@ export default function HomeScreen() {
 	);
 
 	const handleManageStock = () => {
-		// Navigate ke halaman manajemen stok
 		router.push("./StockStack");
 	};
 
 	const handleStartTransaction = () => {
-		// Navigate ke halaman transaksi
-		router.push("./TransactionScreen"); // Updated navigation
+		router.push("./TransactionScreen");
 	};
 
 	const handleViewLogs = () => {
-		// Navigate ke halaman log
-		router.push("./logScreen"); // Navigate to LogScreen within StockStack
+		router.push("./logScreen");
 	};
 
 	return (
 		<SafeAreaView style={styles.container}>
-			<StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
+			<StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
 
+			{/* Background Gradient */}
 			<LinearGradient
-				colors={["#1a1a2e", "#16213e", "#0f3460"]}
+				colors={["#f8fafc", "#e2e8f0", "#cbd5e1"]}
 				style={styles.gradient}
 			>
-				<ScrollView contentContainerStyle={styles.scrollViewContent}>
-					{/* Header */}
-					<View style={styles.header}>
-						<Text style={styles.greeting}>Selamat Datang!</Text>
-						<Text style={styles.appName}>Toko Annaya Tegal</Text>
+				{/* Floating Background Elements */}
+				<View style={styles.floatingElement1} />
+				<View style={styles.floatingElement2} />
+				<View style={styles.floatingElement3} />
+
+				<ScrollView
+					contentContainerStyle={styles.scrollViewContent}
+					showsVerticalScrollIndicator={false}
+				>
+					{/* Header with Liquid Glass Effect */}
+					<View style={styles.headerContainer}>
+						<View style={styles.header}>
+							<Text style={styles.greeting}>Selamat Datang! 👋</Text>
+							<Text style={styles.appName}>Toko Annaya Tegal</Text>
+						</View>
 					</View>
 
+					{/* Logo Section with Enhanced Glass Effect */}
 					<View style={styles.logoContainer}>
 						<View style={styles.logoBackground}>
-							<Ionicons name="storefront" size={80} color="#00d4ff" />
+							<LinearGradient
+								colors={["rgba(59, 130, 246, 0.8)", "rgba(99, 102, 241, 0.8)"]}
+								style={styles.logoGradient}
+							>
+								<Ionicons name="storefront" size={60} color="white" />
+							</LinearGradient>
 						</View>
 						<Text style={styles.logoText}>Kasir Digital Toko Annaya</Text>
 					</View>
 
-					{/* Primary Action Buttons */}
+					{/* Primary Action Buttons with Liquid Glass */}
 					<View style={styles.primaryButtonsContainer}>
 						<TouchableOpacity
-							style={styles.primaryButton}
+							style={[styles.primaryButton, styles.liquidGlass]}
 							onPress={handleStartTransaction}
+							activeOpacity={0.8}
 						>
-							<Ionicons name="cart-outline" size={30} color="#00d4ff" />
-							<Text style={styles.primaryButtonText}>Mulai Transaksi</Text>
+							<LinearGradient
+								colors={["rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0.05)"]}
+								style={styles.buttonGradient}
+							>
+								<View style={styles.iconBackground}>
+									<Ionicons name="cart-outline" size={28} color="#059669" />
+								</View>
+								<Text style={styles.primaryButtonText}>Mulai Transaksi</Text>
+								<Text style={styles.primaryButtonSubtext}>
+									Buat transaksi baru
+								</Text>
+							</LinearGradient>
 						</TouchableOpacity>
+
 						<TouchableOpacity
-							style={styles.primaryButton}
+							style={[styles.primaryButton, styles.liquidGlass]}
 							onPress={handleManageStock}
+							activeOpacity={0.8}
 						>
-							<Ionicons name="cube-outline" size={30} color="#00d4ff" />
-							<Text style={styles.primaryButtonText}>Kelola Stok</Text>
+							<LinearGradient
+								colors={["rgba(168, 85, 247, 0.1)", "rgba(168, 85, 247, 0.05)"]}
+								style={styles.buttonGradient}
+							>
+								<View style={styles.iconBackground}>
+									<Ionicons name="cube-outline" size={28} color="#7c3aed" />
+								</View>
+								<Text style={styles.primaryButtonText}>Kelola Stok</Text>
+								<Text style={styles.primaryButtonSubtext}>Atur inventori</Text>
+							</LinearGradient>
 						</TouchableOpacity>
 					</View>
 
-					{/* Secondary Action Buttons */}
-					<View style={styles.secondaryButtonsContainer}>
-						<TouchableOpacity
-							style={styles.secondaryButton}
-							onPress={handleViewLogs}
+					{/* Secondary Action Button */}
+					<TouchableOpacity
+						style={[styles.secondaryButton, styles.liquidGlass]}
+						onPress={handleViewLogs}
+						activeOpacity={0.8}
+					>
+						<LinearGradient
+							colors={["rgba(251, 191, 36, 0.1)", "rgba(251, 191, 36, 0.05)"]}
+							style={styles.secondaryButtonGradient}
 						>
-							<View style={styles.secondaryButtonContent}>
-								<View style={styles.iconContainer}>
-									<Ionicons name="receipt-outline" size={24} color="#00d4ff" />
+							<View style={styles.secondaryIconContainer}>
+								<Ionicons name="receipt-outline" size={24} color="#d97706" />
+							</View>
+							<View style={styles.buttonTextContainer}>
+								<Text style={styles.secondaryButtonText}>
+									Lihat Log Aktivitas
+								</Text>
+								<Text style={styles.secondaryButtonSubtext}>
+									Riwayat transaksi dan perubahan stok
+								</Text>
+							</View>
+							<View style={styles.arrowContainer}>
+								<Ionicons name="chevron-forward" size={20} color="#64748b" />
+							</View>
+						</LinearGradient>
+					</TouchableOpacity>
+
+					{/* Financial Summary with Enhanced Glass Effect */}
+					<View style={[styles.statsContainer, styles.liquidGlass]}>
+						<LinearGradient
+							colors={["rgba(59, 130, 246, 0.08)", "rgba(99, 102, 241, 0.08)"]}
+							style={styles.statsGradient}
+						>
+							<View style={styles.statsHeader}>
+								<Ionicons name="analytics-outline" size={24} color="#3b82f6" />
+								<Text style={styles.statsTitle}>Ringkasan Keuangan</Text>
+							</View>
+
+							<View style={styles.statsGrid}>
+								<View style={styles.statCard}>
+									<Text style={styles.statLabel}>Pemasukan Minggu</Text>
+									<Text style={styles.statValue}>
+										Rp{" "}
+										{weeklyIncome !== null
+											? weeklyIncome.toLocaleString("id-ID")
+											: "0"}
+									</Text>
 								</View>
-								<View style={styles.buttonTextContainer}>
-									<Text style={styles.secondaryButtonText}>Lihat Log</Text>
-									<Text style={styles.secondaryButtonSubtext}>
-										Lihat riwayat penambahan stok dan transaksi
+
+								<View style={styles.statCard}>
+									<Text style={styles.statLabel}>Pemasukan Bulan</Text>
+									<Text style={styles.statValue}>
+										Rp{" "}
+										{monthlyIncome !== null
+											? monthlyIncome.toLocaleString("id-ID")
+											: "0"}
+									</Text>
+								</View>
+
+								<View style={styles.statCard}>
+									<Text style={styles.statLabel}>Pengeluaran Minggu</Text>
+									<Text style={styles.statValueNegative}>
+										Rp{" "}
+										{weeklyExpenditure !== null
+											? weeklyExpenditure.toLocaleString("id-ID")
+											: "0"}
+									</Text>
+								</View>
+
+								<View style={styles.statCard}>
+									<Text style={styles.statLabel}>Pengeluaran Bulan</Text>
+									<Text style={styles.statValueNegative}>
+										Rp{" "}
+										{monthlyExpenditure !== null
+											? monthlyExpenditure.toLocaleString("id-ID")
+											: "0"}
 									</Text>
 								</View>
 							</View>
-						</TouchableOpacity>
-						{/* Tombol Laporan Keuangan telah dihapus dari sini */}
-					</View>
-
-					{/* Financial Report Section (Tetap ada) */}
-					<View style={styles.statsContainer}>
-						<Text style={styles.statsTitle}>Ringkasan Pemasukan</Text>
-						<View style={styles.statRow}>
-							<Text style={styles.statLabel}>Minggu Ini:</Text>
-							<Text style={styles.statValue}>
-								Rp{" "}
-								{weeklyIncome !== null
-									? weeklyIncome.toLocaleString("id-ID")
-									: "..."}
-							</Text>
-						</View>
-						<View style={styles.statRow}>
-							<Text style={styles.statLabel}>Bulan Ini:</Text>
-							<Text style={styles.statValue}>
-								Rp{" "}
-								{monthlyIncome !== null
-									? monthlyIncome.toLocaleString("id-ID")
-									: "..."}
-							</Text>
-						</View>
-						<View style={styles.statRow}>
-							<Text style={styles.statLabel}>Pengeluaran Minggu Ini:</Text>
-							<Text style={styles.statValue}>
-								Rp{" "}
-								{weeklyExpenditure !== null
-									? weeklyExpenditure.toLocaleString("id-ID")
-									: "..."}
-							</Text>
-						</View>
-						<View style={styles.statRow}>
-							<Text style={styles.statLabel}>Pengeluaran Bulan Ini:</Text>
-							<Text style={styles.statValue}>
-								Rp{" "}
-								{monthlyExpenditure !== null
-									? monthlyExpenditure.toLocaleString("id-ID")
-									: "..."}
-							</Text>
-						</View>
+						</LinearGradient>
 					</View>
 				</ScrollView>
 			</LinearGradient>
@@ -197,79 +252,161 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#1a1a2e",
-		marginBottom: 15 + (StatusBar.currentHeight || 0), // Add some space at the bottom
+		backgroundColor: "#f8fafc",
 	},
 	gradient: {
 		flex: 1,
 	},
+	floatingElement1: {
+		position: "absolute",
+		top: 100,
+		right: -50,
+		width: 200,
+		height: 200,
+		borderRadius: 100,
+		backgroundColor: "rgba(59, 130, 246, 0.05)",
+		zIndex: 0,
+	},
+	floatingElement2: {
+		position: "absolute",
+		top: 300,
+		left: -80,
+		width: 160,
+		height: 160,
+		borderRadius: 80,
+		backgroundColor: "rgba(168, 85, 247, 0.05)",
+		zIndex: 0,
+	},
+	floatingElement3: {
+		position: "absolute",
+		bottom: 200,
+		right: -40,
+		width: 120,
+		height: 120,
+		borderRadius: 60,
+		backgroundColor: "rgba(34, 197, 94, 0.05)",
+		zIndex: 0,
+	},
 	scrollViewContent: {
 		flexGrow: 1,
-		paddingVertical: StatusBar.currentHeight || 0,
 		paddingHorizontal: 20,
+		paddingTop: (StatusBar.currentHeight || 0) + 20,
+		paddingBottom: 40,
+		zIndex: 1,
+	},
+	liquidGlass: {
+		backgroundColor: "rgba(255, 255, 255, 0.25)",
+		borderWidth: 1.5,
+		borderColor: "rgba(255, 255, 255, 0.4)",
+		shadowColor: "rgba(0, 0, 0, 0.1)",
+		shadowOffset: { width: 0, height: 8 },
+		shadowOpacity: 0.3,
+		shadowRadius: 32,
+		elevation: 8,
+	},
+	headerContainer: {
+		marginBottom: 32,
 	},
 	header: {
+		backgroundColor: "rgba(255, 255, 255, 0.3)",
+		borderRadius: 20,
+		padding: 24,
 		alignItems: "center",
-		marginBottom: 40,
-		marginTop: 20,
+		borderWidth: 1,
+		borderColor: "rgba(255, 255, 255, 0.5)",
 	},
 	greeting: {
 		fontSize: 28,
-		fontWeight: "bold",
-		color: "#ffffff",
+		fontWeight: "800",
+		color: "#1e293b",
+		marginBottom: 4,
+		textAlign: "center",
 	},
 	appName: {
 		fontSize: 16,
-		color: "#00d4ff",
-		marginTop: 4,
+		color: "#3b82f6",
+		fontWeight: "600",
+	},
+	logoContainer: {
+		alignItems: "center",
+		marginBottom: 40,
+	},
+	logoBackground: {
+		width: 120,
+		height: 120,
+		borderRadius: 30,
+		marginBottom: 16,
+		overflow: "hidden",
+		backgroundColor: "rgba(255, 255, 255, 0.2)",
+		borderWidth: 1,
+		borderColor: "rgba(255, 255, 255, 0.3)",
+	},
+	logoGradient: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	logoText: {
+		fontSize: 20,
+		color: "#1e293b",
+		fontWeight: "700",
+		textAlign: "center",
 	},
 	primaryButtonsContainer: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 30,
+		marginBottom: 24,
+		gap: 16,
 	},
 	primaryButton: {
-		backgroundColor: "#16213e", // Warna latar belakang yang lebih gelap
-		paddingVertical: 25,
-		paddingHorizontal: 15,
-		borderRadius: 15,
+		flex: 1,
+		borderRadius: 20,
+		overflow: "hidden",
+		minHeight: 140,
+	},
+	buttonGradient: {
+		flex: 1,
+		padding: 20,
 		alignItems: "center",
-		width: "48%", // Sesuaikan lebar agar pas 2 kolom
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)", // Border warna terang
-		shadowColor: "#00d4ff", // Efek shadow
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.3,
-		shadowRadius: 5,
-		elevation: 8,
+		justifyContent: "center",
+	},
+	iconBackground: {
+		width: 56,
+		height: 56,
+		borderRadius: 16,
+		backgroundColor: "rgba(255, 255, 255, 0.8)",
+		justifyContent: "center",
+		alignItems: "center",
+		marginBottom: 12,
 	},
 	primaryButtonText: {
-		color: "white",
+		color: "#1e293b",
 		fontSize: 16,
-		fontWeight: "bold",
-		marginTop: 10,
+		fontWeight: "700",
+		textAlign: "center",
+		marginBottom: 4,
 	},
-	secondaryButtonsContainer: {
-		marginBottom: 30,
+	primaryButtonSubtext: {
+		color: "#64748b",
+		fontSize: 12,
+		fontWeight: "500",
+		textAlign: "center",
 	},
 	secondaryButton: {
-		backgroundColor: "rgba(255, 255, 255, 0.08)",
-		borderRadius: 16,
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)",
-		marginBottom: 10, // Added margin for spacing between secondary buttons
+		borderRadius: 20,
+		marginBottom: 24,
+		overflow: "hidden",
 	},
-	secondaryButtonContent: {
+	secondaryButtonGradient: {
 		flexDirection: "row",
 		alignItems: "center",
-		paddingVertical: 20,
-		paddingHorizontal: 24,
+		padding: 20,
 	},
-	iconContainer: {
-		width: 50,
-		height: 50,
-		backgroundColor: "rgba(0, 212, 255, 0.1)",
-		borderRadius: 25,
+	secondaryIconContainer: {
+		width: 48,
+		height: 48,
+		backgroundColor: "rgba(255, 255, 255, 0.8)",
+		borderRadius: 14,
 		justifyContent: "center",
 		alignItems: "center",
 		marginRight: 16,
@@ -279,63 +416,60 @@ const styles = StyleSheet.create({
 	},
 	secondaryButtonText: {
 		fontSize: 18,
-		color: "#ffffff",
-		fontWeight: "600",
+		color: "#1e293b",
+		fontWeight: "700",
+		marginBottom: 2,
 	},
 	secondaryButtonSubtext: {
 		fontSize: 14,
-		color: "#b0b3b8",
-		marginTop: 2,
+		color: "#64748b",
+		fontWeight: "500",
 	},
-	// Styles for Financial Report Section (Tetap ada)
+	arrowContainer: {
+		marginLeft: 12,
+	},
 	statsContainer: {
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		borderRadius: 16,
-		padding: 20,
-		marginVertical: 20,
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)",
+		borderRadius: 24,
+		overflow: "hidden",
+	},
+	statsGradient: {
+		padding: 24,
+	},
+	statsHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 20,
 	},
 	statsTitle: {
 		fontSize: 20,
-		fontWeight: "bold",
-		color: "#00d4ff",
-		marginBottom: 15,
-		textAlign: "center",
+		fontWeight: "700",
+		color: "#1e293b",
+		marginLeft: 12,
 	},
-	statRow: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 10,
+	statsGrid: {
+		gap: 16,
+	},
+	statCard: {
+		backgroundColor: "rgba(255, 255, 255, 0.6)",
+		borderRadius: 16,
+		padding: 16,
+		borderWidth: 1,
+		borderColor: "rgba(255, 255, 255, 0.8)",
 	},
 	statLabel: {
-		fontSize: 16,
-		color: "#b0b3b8",
+		fontSize: 14,
+		color: "#64748b",
+		fontWeight: "600",
+		marginBottom: 8,
 	},
 	statValue: {
-		fontSize: 16,
-		fontWeight: "bold",
-		color: "white",
+		fontSize: 18,
+		fontWeight: "800",
+		color: "#059669",
 	},
-	logoContainer: {
-		alignItems: "center",
-		marginBottom: 40,
-	},
-	logoBackground: {
-		width: 140,
-		height: 140,
-		backgroundColor: "rgba(0, 212, 255, 0.1)",
-		borderRadius: 70,
-		justifyContent: "center",
-		alignItems: "center",
-		borderWidth: 2,
-		borderColor: "rgba(0, 212, 255, 0.3)",
-		marginBottom: 20,
-	},
-	logoText: {
-		fontSize: 24,
-		color: "#ffffff",
-		fontWeight: "bold",
-		marginBottom: 5,
+	statValueNegative: {
+		fontSize: 18,
+		fontWeight: "800",
+		color: "#dc2626",
 	},
 });

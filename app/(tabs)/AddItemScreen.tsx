@@ -1,6 +1,8 @@
 // screens/AddItemScreen.tsx
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
 	Alert,
@@ -286,75 +288,174 @@ export default function AddItemScreen() {
 
 	return (
 		<SafeAreaView style={styles.container}>
-			<StatusBar barStyle="light-content" backgroundColor="#0f1419" />
-			<View style={styles.header}>
-				<Text style={styles.title}>Mutasi Stok Barang</Text>
-				<Text style={styles.subtitle}>
-					Tambahkan atau kurangi stok barang yang sudah ada, atau tambahkan
-					barang baru.
-				</Text>
-			</View>
+			<StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
 
-			<TouchableOpacity
-				style={styles.mainActionButton}
-				onPress={() => setShowSkuInputModal(true)}
+			{/* Background Gradient */}
+			<LinearGradient
+				colors={["#f8fafc", "#e2e8f0", "#cbd5e1"]}
+				style={styles.gradient}
 			>
-				<Text style={styles.mainActionButtonText}>
-					Mulai Mutasi / Tambah Barang
-				</Text>
-			</TouchableOpacity>
+				{/* Floating Background Elements */}
+				<View style={styles.floatingElement1} />
+				<View style={styles.floatingElement2} />
+				<View style={styles.floatingElement3} />
 
-			{itemsToMutate.length > 0 && (
-				<>
-					<View style={styles.itemsListHeader}>
-						<Text style={styles.itemsListTitle}>Daftar Mutasi Sementara:</Text>
-						<Text style={styles.itemsListCount}>
-							({itemsToMutate.length} item)
-						</Text>
+				<ScrollView
+					contentContainerStyle={styles.scrollViewContent}
+					showsVerticalScrollIndicator={false}
+				>
+					{/* Header */}
+					<View style={styles.headerContainer}>
+						<View style={[styles.header, styles.liquidGlass]}>
+							<Text style={styles.title}>Mutasi Stok Barang</Text>
+							<Text style={styles.subtitle}>
+								Tambahkan atau kurangi stok barang yang sudah ada, atau
+								tambahkan barang baru.
+							</Text>
+						</View>
 					</View>
-					<ScrollView style={styles.itemsToMutateList}>
-						{itemsToMutate.map((item) => (
-							<View key={item.tempId} style={styles.mutatedItemRow}>
-								<View style={styles.mutatedItemInfo}>
-									<Text style={styles.mutatedItemName}>
-										{item.nama_barang} ({item.is_new ? "Baru" : "Update"})
-									</Text>
-									<Text style={styles.mutatedItemSku}>SKU: {item.sku}</Text>
-									<Text style={styles.mutatedItemStok}>
-										Mutasi: {item.jumlah_mutasi > 0 ? "+" : ""}
-										{item.jumlah_mutasi} (Stok Saat Ini: {item.stok_sekarang})
-									</Text>
-									<Text style={styles.mutatedItemHarga}>
-										Harga: Rp {item.harga}
-									</Text>
-								</View>
-								<View style={styles.mutatedItemActions}>
-									<TouchableOpacity
-										onPress={() => handleEditMutationItem(item)}
-										style={[styles.actionButton, styles.editButton]}
-									>
-										<Text style={styles.actionButtonText}>Edit</Text>
-									</TouchableOpacity>
-									<TouchableOpacity
-										onPress={() => handleRemoveMutationItem(item.tempId)}
-										style={[styles.actionButton, styles.removeButton]}
-									>
-										<Text style={styles.actionButtonText}>Hapus</Text>
-									</TouchableOpacity>
-								</View>
-							</View>
-						))}
-					</ScrollView>
+
 					<TouchableOpacity
-						style={styles.saveAllButton}
-						onPress={() => setShowBatchConfirmationModal(true)}
+						style={[styles.mainActionButton, styles.liquidGlass]}
+						onPress={() => setShowSkuInputModal(true)}
 					>
-						<Text style={styles.saveAllButtonText}>
-							Simpan {itemsToMutate.length} Mutasi
-						</Text>
+						<LinearGradient
+							colors={["rgba(59, 130, 246, 0.1)", "rgba(99, 102, 241, 0.05)"]}
+							style={styles.mainActionButtonGradient}
+						>
+							<Ionicons name="add-circle-outline" size={32} color="#3b82f6" />
+							<Text style={styles.mainActionButtonText}>
+								Mulai Mutasi / Tambah Barang
+							</Text>
+						</LinearGradient>
 					</TouchableOpacity>
-				</>
-			)}
+
+					{itemsToMutate.length > 0 && (
+						<>
+							<View style={[styles.itemsListHeader, styles.liquidGlass]}>
+								<LinearGradient
+									colors={[
+										"rgba(251, 191, 36, 0.08)",
+										"rgba(251, 191, 36, 0.04)",
+									]}
+									style={styles.itemsListHeaderGradient}
+								>
+									<Ionicons
+										name="list-outline"
+										size={24}
+										color="#d97706"
+										style={{ marginRight: 8 }}
+									/>
+									<Text style={styles.itemsListTitle}>
+										Daftar Mutasi Sementara:
+									</Text>
+									<Text style={styles.itemsListCount}>
+										({itemsToMutate.length} item)
+									</Text>
+								</LinearGradient>
+							</View>
+							<View
+								style={[styles.itemsToMutateListContainer, styles.liquidGlass]}
+							>
+								<ScrollView style={styles.itemsToMutateList}>
+									{itemsToMutate.map((item) => (
+										<View
+											key={item.tempId}
+											style={[styles.mutatedItemRow, styles.liquidGlass]}
+										>
+											<LinearGradient
+												colors={[
+													"rgba(255, 255, 255, 0.6)",
+													"rgba(255, 255, 255, 0.3)",
+												]}
+												style={styles.mutatedItemGradient}
+											>
+												<View style={styles.mutatedItemInfo}>
+													<Text style={styles.mutatedItemName}>
+														{item.nama_barang} (
+														{item.is_new ? "Baru" : "Update"})
+													</Text>
+													<Text style={styles.mutatedItemSku}>
+														SKU: {item.sku}
+													</Text>
+													<Text style={styles.mutatedItemStok}>
+														Mutasi: {item.jumlah_mutasi > 0 ? "+" : ""}
+														{item.jumlah_mutasi} (Stok Saat Ini:{" "}
+														{item.stok_sekarang})
+													</Text>
+													<Text style={styles.mutatedItemHarga}>
+														Harga: Rp {item.harga.toLocaleString("id-ID")}
+													</Text>
+												</View>
+												<View style={styles.mutatedItemActions}>
+													<TouchableOpacity
+														onPress={() => handleEditMutationItem(item)}
+														style={[styles.actionButton, styles.liquidGlass]}
+													>
+														<LinearGradient
+															colors={[
+																"rgba(251, 191, 36, 0.2)",
+																"rgba(251, 191, 36, 0.1)",
+															]}
+															style={styles.actionButtonGradient}
+														>
+															<Ionicons
+																name="create-outline"
+																size={20}
+																color="#d97706"
+															/>
+															<Text style={styles.actionButtonText}>Edit</Text>
+														</LinearGradient>
+													</TouchableOpacity>
+													<TouchableOpacity
+														onPress={() =>
+															handleRemoveMutationItem(item.tempId)
+														}
+														style={[styles.actionButton, styles.liquidGlass]}
+													>
+														<LinearGradient
+															colors={[
+																"rgba(239, 68, 68, 0.2)",
+																"rgba(239, 68, 68, 0.1)",
+															]}
+															style={styles.actionButtonGradient}
+														>
+															<Ionicons
+																name="trash-outline"
+																size={20}
+																color="#ef4444"
+															/>
+															<Text style={styles.actionButtonText}>Hapus</Text>
+														</LinearGradient>
+													</TouchableOpacity>
+												</View>
+											</LinearGradient>
+										</View>
+									))}
+								</ScrollView>
+							</View>
+							<TouchableOpacity
+								style={[styles.saveAllButton, styles.liquidGlass]}
+								onPress={() => setShowBatchConfirmationModal(true)}
+							>
+								<LinearGradient
+									colors={["rgba(34, 197, 94, 0.1)", "rgba(34, 197, 94, 0.05)"]}
+									style={styles.saveAllButtonGradient}
+								>
+									<Ionicons
+										name="checkmark-done-outline"
+										size={24}
+										color="#059669"
+									/>
+									<Text style={styles.saveAllButtonText}>
+										Simpan {itemsToMutate.length} Mutasi
+									</Text>
+								</LinearGradient>
+							</TouchableOpacity>
+						</>
+					)}
+				</ScrollView>
+			</LinearGradient>
 
 			{/* Modal Input/Scan SKU */}
 			<Modal
@@ -364,42 +465,71 @@ export default function AddItemScreen() {
 				onRequestClose={() => setShowSkuInputModal(false)}
 			>
 				<View style={styles.modalOverlay}>
-					<View style={styles.modalContainer}>
-						<Text style={styles.modalTitle}>Masukkan SKU Barang</Text>
-						<TextInput
-							style={styles.input}
-							placeholder="SKU Barang"
-							placeholderTextColor="#b0b3b8"
-							value={currentSkuInput}
-							onChangeText={setCurrentSkuInput}
-						/>
-						<View style={styles.modalButtonsContainer}>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonConfirm]}
-								onPress={() => handleSkuEntered(currentSkuInput)}
-							>
-								<Text style={styles.modalButtonText}>Lanjutkan</Text>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonScan]}
-								onPress={() => {
-									setShowSkuInputModal(false);
-									setScanned(false);
-									setShowScanner(true);
-								}}
-							>
-								<Text style={styles.modalButtonText}>Scan Barcode</Text>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonCancel]}
-								onPress={() => {
-									setShowSkuInputModal(false);
-									setCurrentSkuInput("");
-								}}
-							>
-								<Text style={styles.modalButtonText}>Batal</Text>
-							</TouchableOpacity>
-						</View>
+					<View style={[styles.modalContainer, styles.liquidGlass]}>
+						<LinearGradient
+							colors={["#f8fafc", "#e2e8f0", "#cbd5e1"]}
+							style={styles.modalInnerContainer}
+						>
+							<Text style={styles.modalTitle}>Masukkan SKU Barang</Text>
+							<TextInput
+								style={styles.input}
+								placeholder="SKU Barang"
+								placeholderTextColor="#64748b"
+								value={currentSkuInput}
+								onChangeText={setCurrentSkuInput}
+							/>
+							<View style={styles.modalButtonsContainer}>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={() => handleSkuEntered(currentSkuInput)}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(34, 197, 94, 0.1)",
+											"rgba(34, 197, 94, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>Lanjutkan</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={() => {
+										setShowSkuInputModal(false);
+										setScanned(false);
+										setShowScanner(true);
+									}}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(59, 130, 246, 0.1)",
+											"rgba(99, 102, 241, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>Scan Barcode</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={() => {
+										setShowSkuInputModal(false);
+										setCurrentSkuInput("");
+									}}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(239, 68, 68, 0.1)",
+											"rgba(239, 68, 68, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>Batal</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+							</View>
+						</LinearGradient>
 					</View>
 				</View>
 			</Modal>
@@ -412,74 +542,96 @@ export default function AddItemScreen() {
 				onRequestClose={() => setShowMutationDetailModal(false)}
 			>
 				<View style={styles.modalOverlay}>
-					<View style={styles.modalContainer}>
-						<Text style={styles.modalTitle}>
-							{isNewItem ? "Tambah Barang Baru" : "Mutasi Stok Barang"}
-						</Text>
+					<View style={[styles.modalContainer, styles.liquidGlass]}>
+						<LinearGradient
+							colors={["#f8fafc", "#e2e8f0", "#cbd5e1"]}
+							style={styles.modalInnerContainer}
+						>
+							<Text style={styles.modalTitle}>
+								{isNewItem ? "Tambah Barang Baru" : "Mutasi Stok Barang"}
+							</Text>
 
-						<Text style={styles.detailText}>SKU: {currentSkuInput}</Text>
+							<Text style={styles.detailText}>SKU: {currentSkuInput}</Text>
 
-						{isNewItem ? (
-							<>
-								<TextInput
-									style={styles.input}
-									placeholder="Nama Barang (Baru)"
-									placeholderTextColor="#b0b3b8"
-									value={namaBarangInput}
-									onChangeText={setNamaBarangInput}
-								/>
-								<TextInput
-									style={styles.input}
-									placeholder="Harga (Baru)"
-									placeholderTextColor="#b0b3b8"
-									value={hargaInput}
-									onChangeText={setHargaInput}
-									keyboardType="numeric"
-								/>
-							</>
-						) : (
-							<>
-								<Text style={styles.detailText}>
-									Nama: {selectedItemForMutation?.nama_barang}
-								</Text>
-								<Text style={styles.detailText}>
-									Harga: Rp {selectedItemForMutation?.harga}
-								</Text>
-								<Text style={styles.detailText}>
-									Stok Saat Ini: {selectedItemForMutation?.stok}
-								</Text>
-							</>
-						)}
+							{isNewItem ? (
+								<>
+									<TextInput
+										style={styles.input}
+										placeholder="Nama Barang (Baru)"
+										placeholderTextColor="#64748b"
+										value={namaBarangInput}
+										onChangeText={setNamaBarangInput}
+									/>
+									<TextInput
+										style={styles.input}
+										placeholder="Harga (Baru)"
+										placeholderTextColor="#64748b"
+										value={hargaInput}
+										onChangeText={setHargaInput}
+										keyboardType="numeric"
+									/>
+								</>
+							) : (
+								<>
+									<Text style={styles.detailText}>
+										Nama: {selectedItemForMutation?.nama_barang}
+									</Text>
+									<Text style={styles.detailText}>
+										Harga: Rp{" "}
+										{selectedItemForMutation?.harga.toLocaleString("id-ID")}
+									</Text>
+									<Text style={styles.detailText}>
+										Stok Saat Ini: {selectedItemForMutation?.stok}
+									</Text>
+								</>
+							)}
 
-						<TextInput
-							style={styles.input}
-							placeholder="Jumlah Mutasi Stok (+/-)"
-							placeholderTextColor="#b0b3b8"
-							value={mutationAmount}
-							onChangeText={setMutationAmount}
-							keyboardType="numeric"
-						/>
-						<Text style={styles.mutationHint}>
-							(Gunakan angka positif untuk penambahan, negatif untuk
-							pengurangan, cth: "5" atau "-3")
-						</Text>
+							<TextInput
+								style={styles.input}
+								placeholder="Jumlah Mutasi Stok (+/-)"
+								placeholderTextColor="#64748b"
+								value={mutationAmount}
+								onChangeText={setMutationAmount}
+								keyboardType="numeric"
+							/>
+							<Text style={styles.mutationHint}>
+								(Gunakan angka positif untuk penambahan, negatif untuk
+								pengurangan, cth: "5" atau "-3")
+							</Text>
 
-						<View style={styles.modalButtonsContainer}>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonConfirm]}
-								onPress={handleAddMutationToList}
-							>
-								<Text style={styles.modalButtonText}>
-									Tambah ke Daftar Mutasi
-								</Text>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonCancel]}
-								onPress={() => setShowMutationDetailModal(false)}
-							>
-								<Text style={styles.modalButtonText}>Batal</Text>
-							</TouchableOpacity>
-						</View>
+							<View style={styles.modalButtonsContainer}>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={handleAddMutationToList}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(34, 197, 94, 0.1)",
+											"rgba(34, 197, 94, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>
+											Tambah ke Daftar Mutasi
+										</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={() => setShowMutationDetailModal(false)}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(239, 68, 68, 0.1)",
+											"rgba(239, 68, 68, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>Batal</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+							</View>
+						</LinearGradient>
 					</View>
 				</View>
 			</Modal>
@@ -539,63 +691,105 @@ export default function AddItemScreen() {
 				onRequestClose={handleCancelBatchConfirmationModal}
 			>
 				<View style={styles.modalOverlay}>
-					<View style={styles.confirmationModalContainer}>
-						<Text style={styles.confirmationModalTitle}>
-							Konfirmasi Simpan Mutasi
-						</Text>
-						<Text style={styles.confirmationModalQuestion}>
-							Anda akan memutasi {itemsToMutate.length} item. Yakin ingin
-							menyimpan?
-						</Text>
-						<ScrollView style={styles.addedItemsList}>
-							{itemsToMutate.map((item, index) => (
-								<View key={item.tempId} style={styles.addedItemRow}>
-									<View style={styles.addedItemInfo}>
-										<Text style={styles.addedItemTextBold}>
-											{item.nama_barang}
-										</Text>
-										<Text style={styles.addedItemText}>SKU: {item.sku}</Text>
-										<Text style={styles.addedItemText}>
-											Tipe: {item.is_new ? "Baru" : "Update"}
-										</Text>
-										<Text style={styles.addedItemText}>
-											Mutasi: {item.jumlah_mutasi > 0 ? "+" : ""}
-											{item.jumlah_mutasi}
-										</Text>
-										{!item.is_new && (
-											<Text style={styles.addedItemText}>
-												Stok Saat Ini: {item.stok_sekarang}
-											</Text>
-										)}
-										<Text style={styles.addedItemText}>
-											Harga: Rp {item.harga}
-										</Text>
+					<View style={[styles.confirmationModalContainer, styles.liquidGlass]}>
+						<LinearGradient
+							colors={["#f8fafc", "#e2e8f0", "#cbd5e1"]}
+							style={styles.modalInnerContainer}
+						>
+							<Text style={styles.confirmationModalTitle}>
+								Konfirmasi Simpan Mutasi
+							</Text>
+							<Text style={styles.confirmationModalQuestion}>
+								Anda akan memutasi {itemsToMutate.length} item. Yakin ingin
+								menyimpan?
+							</Text>
+							<ScrollView style={styles.addedItemsList}>
+								{itemsToMutate.map((item, index) => (
+									<View
+										key={item.tempId}
+										style={[styles.addedItemRow, styles.liquidGlass]}
+									>
+										<LinearGradient
+											colors={[
+												"rgba(255, 255, 255, 0.6)",
+												"rgba(255, 255, 255, 0.3)",
+											]}
+											style={styles.addedItemGradient}
+										>
+											<View style={styles.addedItemInfo}>
+												<Text style={styles.addedItemTextBold}>
+													{item.nama_barang}
+												</Text>
+												<Text style={styles.addedItemText}>
+													SKU: {item.sku}
+												</Text>
+												<Text style={styles.addedItemText}>
+													Tipe: {item.is_new ? "Baru" : "Update"}
+												</Text>
+												<Text style={styles.addedItemText}>
+													Mutasi: {item.jumlah_mutasi > 0 ? "+" : ""}
+													{item.jumlah_mutasi}
+												</Text>
+												{!item.is_new && (
+													<Text style={styles.addedItemText}>
+														Stok Saat Ini: {item.stok_sekarang}
+													</Text>
+												)}
+												<Text style={styles.addedItemText}>
+													Harga: Rp {item.harga.toLocaleString("id-ID")}
+												</Text>
+											</View>
+										</LinearGradient>
 									</View>
-								</View>
-							))}
-						</ScrollView>
-						<View style={styles.modalButtonsContainer}>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonConfirm]}
-								onPress={handleConfirmAllAndSave}
-							>
-								<Text style={styles.modalButtonText}>Simpan Semua</Text>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonCancel]}
-								onPress={handleCancelAllMutations}
-							>
-								<Text style={styles.modalButtonText}>
-									Batal Semua & Kembali
-								</Text>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={[styles.modalButton, styles.modalButtonDiscard]}
-								onPress={handleCancelBatchConfirmationModal}
-							>
-								<Text style={styles.modalButtonText}>Kembali Edit</Text>
-							</TouchableOpacity>
-						</View>
+								))}
+							</ScrollView>
+							<View style={styles.modalButtonsContainer}>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={handleConfirmAllAndSave}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(34, 197, 94, 0.1)",
+											"rgba(34, 197, 94, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>Simpan Semua</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={handleCancelAllMutations}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(239, 68, 68, 0.1)",
+											"rgba(239, 68, 68, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>
+											Batal Semua & Kembali
+										</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[styles.modalButton, styles.liquidGlass]}
+									onPress={handleCancelBatchConfirmationModal}
+								>
+									<LinearGradient
+										colors={[
+											"rgba(251, 191, 36, 0.1)",
+											"rgba(251, 191, 36, 0.05)",
+										]}
+										style={styles.modalButtonGradient}
+									>
+										<Text style={styles.modalButtonText}>Kembali Edit</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+							</View>
+						</LinearGradient>
 					</View>
 				</View>
 			</Modal>
@@ -606,111 +800,168 @@ export default function AddItemScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#0f1419",
-		padding: 20,
-		paddingTop: StatusBar.currentHeight,
+		backgroundColor: "#f8fafc",
+	},
+	gradient: {
+		flex: 1,
+	},
+	floatingElement1: {
+		position: "absolute",
+		top: 100,
+		right: -50,
+		width: 200,
+		height: 200,
+		borderRadius: 100,
+		backgroundColor: "rgba(59, 130, 246, 0.05)",
+		zIndex: 0,
+	},
+	floatingElement2: {
+		position: "absolute",
+		top: 300,
+		left: -80,
+		width: 160,
+		height: 160,
+		borderRadius: 80,
+		backgroundColor: "rgba(168, 85, 247, 0.05)",
+		zIndex: 0,
+	},
+	floatingElement3: {
+		position: "absolute",
+		bottom: 200,
+		right: -40,
+		width: 120,
+		height: 120,
+		borderRadius: 60,
+		backgroundColor: "rgba(34, 197, 94, 0.05)",
+		zIndex: 0,
+	},
+	scrollViewContent: {
+		flexGrow: 1,
+		paddingHorizontal: 20,
+		paddingTop: (StatusBar.currentHeight || 0) + 20,
+		paddingBottom: 40,
+		zIndex: 1,
+	},
+	liquidGlass: {
+		backgroundColor: "rgba(255, 255, 255, 0.25)",
+		borderWidth: 1.5,
+		borderColor: "rgba(255, 255, 255, 0.4)",
+		shadowColor: "rgba(0, 0, 0, 0.1)",
+		shadowOffset: { width: 0, height: 8 },
+		shadowOpacity: 0.3,
+		shadowRadius: 32,
+		elevation: 8,
+	},
+	headerContainer: {
+		marginBottom: 32,
 	},
 	header: {
-		marginBottom: 20,
+		borderRadius: 20,
+		padding: 24,
 		alignItems: "center",
 	},
 	title: {
-		fontSize: 24,
-		fontWeight: "bold",
-		color: "#00d4ff",
-		marginBottom: 8,
+		fontSize: 28,
+		fontWeight: "800",
+		color: "#1e293b",
+		marginBottom: 4,
+		textAlign: "center",
 	},
 	subtitle: {
 		fontSize: 16,
-		color: "#b0b3b8",
+		color: "#3b82f6",
+		fontWeight: "600",
 		textAlign: "center",
 	},
 	input: {
 		width: "100%",
 		height: 50,
-		backgroundColor: "#1e2a38",
+		backgroundColor: "rgba(255, 255, 255, 0.7)",
 		borderRadius: 10,
 		paddingHorizontal: 15,
-		color: "white",
+		color: "#1e293b",
 		marginBottom: 15,
 		fontSize: 16,
 		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)",
+		borderColor: "rgba(255, 255, 255, 0.8)",
 	},
 	mainActionButton: {
-		backgroundColor: "#00d4ff", // Warna mencolok untuk aksi utama
-		paddingVertical: 18,
-		borderRadius: 12,
-		alignItems: "center",
+		borderRadius: 20,
 		marginBottom: 25,
-		shadowColor: "#00d4ff",
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.3,
-		shadowRadius: 5,
-		elevation: 8,
+		overflow: "hidden",
+	},
+	mainActionButtonGradient: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		paddingVertical: 18,
+		paddingHorizontal: 20,
+		gap: 10,
 	},
 	mainActionButtonText: {
-		color: "#0f1419",
+		color: "#1e293b",
 		fontSize: 20,
 		fontWeight: "bold",
 	},
 	itemsListHeader: {
+		borderRadius: 16,
+		marginBottom: 16,
+		overflow: "hidden",
+	},
+	itemsListHeaderGradient: {
 		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "flex-end",
-		marginBottom: 10,
-		paddingHorizontal: 5,
+		alignItems: "center",
+		padding: 16,
 	},
 	itemsListTitle: {
 		fontSize: 18,
-		fontWeight: "bold",
-		color: "white",
+		fontWeight: "700",
+		color: "#1e293b",
 	},
 	itemsListCount: {
 		fontSize: 16,
-		color: "#b0b3b8",
+		color: "#64748b",
+		marginLeft: "auto",
+	},
+	itemsToMutateListContainer: {
+		borderRadius: 16,
+		marginBottom: 24,
+		overflow: "hidden",
 	},
 	itemsToMutateList: {
-		flex: 1,
-		width: "100%",
-		marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
-		marginBottom: 16 + (StatusBar.currentHeight || 0), // Adjust for status bar height
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		borderRadius: 10,
+		maxHeight: Dimensions.get("window").height * 0.4,
 		padding: 10,
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.1)",
 	},
 	mutatedItemRow: {
+		borderRadius: 16,
+		marginBottom: 10,
+		overflow: "hidden",
+	},
+	mutatedItemGradient: {
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		backgroundColor: "#1e2a38",
-		borderRadius: 8,
-		padding: 12,
-		marginBottom: 10,
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.2)",
+		padding: 16,
 	},
 	mutatedItemInfo: {
 		flex: 3,
 	},
 	mutatedItemName: {
-		color: "#00d4ff",
+		color: "#1e293b",
 		fontSize: 17,
 		fontWeight: "bold",
 		marginBottom: 2,
 	},
 	mutatedItemSku: {
-		color: "white",
+		color: "#475569",
 		fontSize: 14,
 	},
 	mutatedItemStok: {
-		color: "#b0b3b8",
+		color: "#475569",
 		fontSize: 14,
 	},
 	mutatedItemHarga: {
-		color: "#b0b3b8",
+		color: "#475569",
 		fontSize: 14,
 	},
 	mutatedItemActions: {
@@ -720,31 +971,36 @@ const styles = StyleSheet.create({
 		gap: 8,
 	},
 	actionButton: {
-		paddingVertical: 6,
-		paddingHorizontal: 12,
-		borderRadius: 5,
+		borderRadius: 12,
+		overflow: "hidden",
 	},
-	editButton: {
-		backgroundColor: "#ffc107", // Yellow
-	},
-	removeButton: {
-		backgroundColor: "#dc3545", // Red
+	actionButtonGradient: {
+		paddingVertical: 8,
+		paddingHorizontal: 10,
+		alignItems: "center",
+		justifyContent: "center",
+		flexDirection: "row",
+		gap: 4,
 	},
 	actionButtonText: {
-		color: "white",
-		fontSize: 14,
-		fontWeight: "bold",
+		color: "#1e293b",
+		fontSize: 12,
+		fontWeight: "600",
 	},
 	saveAllButton: {
-		backgroundColor: "#28a745", // Green for "Save All"
-		paddingVertical: 15,
-		borderRadius: 10,
+		borderRadius: 20,
+		overflow: "hidden",
+		marginTop: 8,
+	},
+	saveAllButtonGradient: {
+		flexDirection: "row",
 		alignItems: "center",
-		marginTop: -25,
-		marginBottom: 15 + (StatusBar.currentHeight || 0), // Adjust for status bar height
+		justifyContent: "center",
+		paddingVertical: 15,
+		gap: 10,
 	},
 	saveAllButtonText: {
-		color: "white",
+		color: "#1e293b",
 		fontSize: 18,
 		fontWeight: "bold",
 	},
@@ -752,17 +1008,17 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		backgroundColor: "#0f1419",
+		backgroundColor: "#f8fafc",
 		padding: 20,
 	},
 	permissionText: {
-		color: "white",
+		color: "#1e293b",
 		fontSize: 18,
 		textAlign: "center",
 		marginBottom: 20,
 	},
 	requestPermissionButton: {
-		backgroundColor: "#007bff",
+		backgroundColor: "#3b82f6",
 		paddingVertical: 12,
 		paddingHorizontal: 20,
 		borderRadius: 8,
@@ -782,7 +1038,7 @@ const styles = StyleSheet.create({
 	closeScannerButton: {
 		position: "absolute",
 		bottom: 40,
-		backgroundColor: "#dc3545",
+		backgroundColor: "#ef4444",
 		paddingVertical: 12,
 		paddingHorizontal: 20,
 		borderRadius: 8,
@@ -828,141 +1084,111 @@ const styles = StyleSheet.create({
 		width: "100%",
 		backgroundColor: "rgba(0,0,0,0.5)",
 	},
-	// Styles for Modals (general purpose)
 	modalOverlay: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		backgroundColor: "rgba(0, 0, 0, 0.7)",
+		backgroundColor: "rgba(0, 0, 0, 0.4)",
 	},
 	modalContainer: {
-		backgroundColor: "#1e2a38",
-		borderRadius: 15,
-		padding: 25,
+		borderRadius: 20,
 		width: "85%",
-		height: "40%", // Allow height to adjust based on content
+		maxHeight: "80%", // Adjusted for better fit
+		overflow: "hidden",
+	},
+	modalInnerContainer: {
+		padding: 25,
 		alignItems: "center",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
-		elevation: 5,
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)",
+		width: "100%",
+		height: "100%",
 	},
 	modalTitle: {
-		// Ini adalah style untuk modalTitle
 		fontSize: 22,
-		fontWeight: "bold",
-		color: "#00d4ff",
+		fontWeight: "800",
+		color: "#1e293b",
 		marginBottom: 15,
 		textAlign: "center",
 	},
 	modalButtonsContainer: {
 		flexDirection: "column",
-		justifyContent: "space-around",
 		width: "100%",
 		gap: 15,
 		marginTop: 15,
 	},
 	modalButton: {
+		borderRadius: 12,
+		overflow: "hidden",
+	},
+	modalButtonGradient: {
 		paddingVertical: 12,
 		paddingHorizontal: 15,
-		borderRadius: 8,
 		alignItems: "center",
-	},
-	modalButtonConfirm: {
-		backgroundColor: "#28a745",
-	},
-	modalButtonScan: {
-		backgroundColor: "#007bff",
-	},
-	modalButtonCancel: {
-		backgroundColor: "#dc3545",
-	},
-	modalButtonDiscard: {
-		// New style for "Kembali Edit" in batch confirmation
-		backgroundColor: "#ffc107",
+		justifyContent: "center",
 	},
 	modalButtonText: {
-		color: "white",
-		fontSize: 15,
-		fontWeight: "bold",
+		color: "#1e293b",
+		fontSize: 16,
+		fontWeight: "700",
 		textAlign: "center",
-		margin: -5,
-		alignContent: "center",
-		alignItems: "center",
-		width: "100%",
-		textAlignVertical: "center",
-		alignSelf: "center",
 	},
 	detailText: {
-		color: "white",
+		color: "#1e293b",
 		fontSize: 16,
 		marginBottom: 8,
 		width: "100%",
 		textAlign: "left",
+		fontWeight: "500",
 	},
 	mutationHint: {
 		fontSize: 12,
-		color: "#b0b3b8",
+		color: "#64748b",
 		marginBottom: 15,
 		textAlign: "center",
+		fontStyle: "italic",
 	},
-	// Styles for Batch Confirmation Modal
 	confirmationModalContainer: {
-		backgroundColor: "#1e2a38",
-		borderRadius: 15,
-		padding: 25,
+		borderRadius: 20,
 		width: "90%",
-		maxHeight: "85%", // Lebih tinggi untuk daftar
-		alignItems: "center",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
-		elevation: 5,
-		borderWidth: 1,
-		borderColor: "rgba(0, 212, 255, 0.3)",
+		maxHeight: "85%",
+		overflow: "hidden",
 	},
 	confirmationModalTitle: {
-		// Ini adalah style untuk confirmationModalTitle
 		fontSize: 22,
-		fontWeight: "bold",
-		color: "#00d4ff",
+		fontWeight: "800",
+		color: "#1e293b",
 		marginBottom: 15,
 		textAlign: "center",
 	},
 	confirmationModalQuestion: {
 		fontSize: 16,
-		color: "#b0b3b8",
+		color: "#475569",
 		textAlign: "center",
 		marginBottom: 15,
+		fontWeight: "500",
 	},
 	addedItemsList: {
 		width: "100%",
-		maxHeight: Dimensions.get("window").height * 0.45, // Batasi tinggi daftar
+		maxHeight: Dimensions.get("window").height * 0.35, // Adjusted height
 		marginBottom: 20,
 	},
 	addedItemRow: {
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		borderRadius: 8,
-		padding: 10,
+		borderRadius: 16,
 		marginBottom: 10,
-		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.1)",
+		overflow: "hidden",
 	},
-	addedItemInfo: {
-		// Just flex for this context, as action buttons are not here
+	addedItemGradient: {
+		padding: 16,
 	},
+	addedItemInfo: {},
 	addedItemTextBold: {
-		color: "white",
+		color: "#1e293b",
 		fontSize: 17,
 		fontWeight: "bold",
 		marginBottom: 2,
 	},
 	addedItemText: {
-		color: "#b0b3b8",
+		color: "#475569",
 		fontSize: 14,
+		fontWeight: "500",
 	},
 });
