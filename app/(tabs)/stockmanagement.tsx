@@ -11,7 +11,8 @@ import {
 	Dimensions,
 	FlatList,
 	Modal,
-	SafeAreaView, // Pastikan SafeAreaView sudah diimpor
+	SafeAreaView,
+	ScrollView, // Pastikan SafeAreaView sudah diimpor
 	StatusBar,
 	StyleSheet,
 	Text,
@@ -19,58 +20,81 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { Dropdown } from "react-native-element-dropdown";
 import { Barang, deleteStock, getAllStock } from "../database";
+import { RootStackParamList } from "./StockStack"; // Import RootStackParamList
 
 const { width } = Dimensions.get("window");
 
-type StockStackParamList = {
-	StockManagement: undefined;
-	AddItem: undefined;
-	EditItem: { item: Barang };
-};
+// Perbarui tipe untuk navigation prop
+type StockManagementNavigationProp = NavigationProp<
+	RootStackParamList,
+	"StockManagement"
+>;
+
+type SortKey = "nama_barang" | "sku" | "harga" | "stok";
+type SortOrder = "asc" | "desc";
 
 export default function StockManagement() {
-	const navigation = useNavigation<NavigationProp<StockStackParamList>>();
+	const navigation = useNavigation<StockManagementNavigationProp>();
 
 	const [items, setItems] = useState<Barang[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
 
 	const [searchText, setSearchText] = useState("");
-	const [sortOption, setSortOption] = useState("nama_barang");
-	const [isFocus, setIsFocus] = useState(false);
+	// Menghapus sortOption dan isFocus karena akan diganti dengan sortColumn dan sortOrder
+	// const [sortOption, setSortOption] = useState<SortKey>("nama_barang");
+	// const [isFocus, setIsFocus] = useState(false);
 
-	const [scanned, setScanned] = useState(false);
+	const [permission, requestPermission] = useCameraPermissions();
+	const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
 	const [showScanner, setShowScanner] = useState(false);
-	const [cameraPermission, requestPermission] = useCameraPermissions();
 
-	const sortOptions = [
-		{ label: "Nama Barang", value: "nama_barang" },
-		{ label: "SKU", value: "sku" },
-		{ label: "Harga", value: "harga" },
-		{ label: "Stok", value: "stok" },
-	];
+	const [sortColumn, setSortColumn] = useState<SortKey | null>(null);
+	const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
-	const fetchItems = async () => {
+	const fetchItems = useCallback(async () => {
+		setLoading(true);
 		try {
-			const fetchedItems = await getAllStock();
-			setItems(fetchedItems);
+			const allItems = await getAllStock();
+			let filteredItems = allItems.filter(
+				(item) =>
+					item.nama_barang.toLowerCase().includes(searchText.toLowerCase()) ||
+					item.sku.toLowerCase().includes(searchText.toLowerCase())
+			);
+
+			let sortedItems = [...filteredItems]; // Buat salinan untuk diurutkan
+
+			if (sortColumn) {
+				sortedItems.sort((a, b) => {
+					let valA: any = a[sortColumn];
+					let valB: any = b[sortColumn];
+
+					// Penanganan khusus untuk string vs. number
+					if (typeof valA === "string" && typeof valB === "string") {
+						return sortOrder === "asc"
+							? valA.localeCompare(valB)
+							: valB.localeCompare(valA);
+					} else {
+						// Asumsi harga dan stok adalah number
+						return sortOrder === "asc" ? valA - valB : valB - valA;
+					}
+				});
+			}
+
+			setItems(sortedItems);
 		} catch (error) {
-			Alert.alert("Error", "Gagal memuat data barang.");
+			Alert.alert("Error", "Gagal memuat daftar barang.");
 			console.error("Error fetching items:", error);
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [searchText, sortColumn, sortOrder]); // Tambahkan dependensi sortColumn dan sortOrder
 
 	useFocusEffect(
 		useCallback(() => {
-			setLoading(true);
 			fetchItems();
-			setActiveDropdown(null);
-			setSearchText("");
-		}, [])
+		}, [fetchItems])
 	);
 
 	const handleDelete = async (id: number) => {
@@ -78,118 +102,182 @@ export default function StockManagement() {
 			"Konfirmasi Hapus",
 			"Apakah Anda yakin ingin menghapus barang ini?",
 			[
-				{ text: "Batal", style: "cancel" },
+				{
+					text: "Batal",
+					style: "cancel",
+				},
 				{
 					text: "Hapus",
 					onPress: async () => {
 						try {
 							await deleteStock(id);
-							Alert.alert("Sukses", "Barang berhasil dihapus.");
-							fetchItems();
+							Alert.alert("Berhasil", "Barang berhasil dihapus.");
+							fetchItems(); // Refresh daftar setelah penghapusan
 						} catch (error) {
 							Alert.alert("Error", "Gagal menghapus barang.");
 							console.error("Error deleting item:", error);
 						}
 					},
 				},
-			]
+			],
+			{ cancelable: false }
 		);
 	};
 
-	const handleEdit = (item: Barang) => {
-		navigation.navigate("EditItem", { item });
-	};
-
-	const handleBarCodeScanned = ({ data }: { type: string; data: string }) => {
-		setScanned(true);
-		setSearchText(data);
+	const handleBarcodeScanned = ({ data }: { data: string }) => {
+		setScannedBarcode(data);
 		setShowScanner(false);
+		setSearchText(data); // Otomatis mencari SKU yang di-scan
 	};
 
-	const filteredAndSortedItems = [...items]
-		.filter(
-			(item) =>
-				item.nama_barang.toLowerCase().includes(searchText.toLowerCase()) ||
-				item.sku.toLowerCase().includes(searchText.toLowerCase())
-		)
-		.sort((a, b) => {
-			if (sortOption === "nama_barang") {
-				return a.nama_barang.localeCompare(b.nama_barang);
-			} else if (sortOption === "sku") {
-				return a.sku.localeCompare(b.sku);
-			} else if (sortOption === "harga") {
-				return a.harga - b.harga;
-			} else if (sortOption === "stok") {
-				return a.stok - b.stok;
-			}
-			return 0;
-		});
+	if (showScanner) {
+		if (!permission) {
+			return <View style={styles.permissionContainer} />;
+		}
 
-	const TableHeader = () => (
-		<View style={styles.tableHeader}>
-			<Text style={[styles.headerText, { flex: 2 }]}>Nama Barang</Text>
-			<Text style={[styles.headerText, { flex: 2 }]}>SKU</Text>
-			<Text style={[styles.headerText, { flex: 2.2 }]}>Harga</Text>
-			<Text style={[styles.headerText, { flex: 1.5 }]}>Stok</Text>
-			<Text style={[styles.headerText, { flex: 1.5 }]}>Aksi</Text>
-		</View>
-	);
+		if (!permission.granted) {
+			return (
+				<View style={styles.permissionContainer}>
+					<Text style={styles.permissionText}>
+						Kami memerlukan izin kamera untuk memindai barcode.
+					</Text>
+					<TouchableOpacity
+						onPress={requestPermission}
+						style={styles.requestPermissionButton}
+					>
+						<Text style={styles.requestPermissionButtonText}>
+							Berikan Izin Kamera
+						</Text>
+					</TouchableOpacity>
+				</View>
+			);
+		}
+
+		return (
+			<Modal
+				animationType="slide"
+				transparent={false}
+				visible={showScanner}
+				onRequestClose={() => setShowScanner(false)}
+			>
+				<SafeAreaView style={styles.scannerContainer}>
+					<StatusBar barStyle="light-content" backgroundColor="black" />
+					<CameraView
+						onBarcodeScanned={scannedBarcode ? undefined : handleBarcodeScanned}
+						barcodeScannerSettings={{
+							barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "qr"],
+						}}
+						style={StyleSheet.absoluteFillObject}
+					/>
+					{scannedBarcode && (
+						<View style={styles.scanResultOverlay}>
+							<Text style={styles.scanResultText}>
+								Barcode Terdeteksi: {scannedBarcode}
+							</Text>
+							<TouchableOpacity
+								style={styles.scanAgainButton}
+								onPress={() => setScannedBarcode(null)}
+							>
+								<Text style={styles.scanAgainButtonText}>Pindai Lagi</Text>
+							</TouchableOpacity>
+						</View>
+					)}
+					<View style={styles.overlay}>
+						<View style={styles.topOverlay} />
+						<View style={styles.middleOverlay}>
+							<View style={styles.overlaySide} />
+							<View style={styles.barcodeFrame} />
+							<View style={styles.overlaySide} />
+						</View>
+						<View style={styles.bottomOverlay} />
+					</View>
+					<TouchableOpacity
+						style={styles.closeScannerButton}
+						onPress={() => setShowScanner(false)}
+					>
+						<Text style={styles.closeScannerButtonText}>Tutup Pemindai</Text>
+					</TouchableOpacity>
+				</SafeAreaView>
+			</Modal>
+		);
+	}
+
+	const handleSort = (column: SortKey) => {
+		if (sortColumn === column) {
+			setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+		} else {
+			setSortColumn(column);
+			setSortOrder("asc");
+		}
+	};
+
+	const getSortIcon = (column: SortKey) => {
+		if (sortColumn === column) {
+			return sortOrder === "asc" ? (
+				<AntDesign
+					name="caretup"
+					size={12}
+					color="#00d4ff"
+					style={styles.sortIcon}
+				/>
+			) : (
+				<AntDesign
+					name="caretdown"
+					size={12}
+					color="#00d4ff"
+					style={styles.sortIcon}
+				/>
+			);
+		}
+		return null;
+	};
 
 	const renderItem = ({ item }: { item: Barang }) => (
 		<View style={styles.tableRow}>
-			<View style={[styles.cellContainer, { flex: 2 }]}>
-				<Text style={styles.cellText} numberOfLines={2}>
-					{item.nama_barang}
-				</Text>
-			</View>
-			<View style={[styles.cellContainer, { flex: 2 }]}>
-				<Text style={styles.cellText} numberOfLines={1}>
-					{item.sku}
-				</Text>
-			</View>
-			<View style={[styles.cellContainer, { flex: 2.2 }]}>
-				<Text style={styles.cellText} numberOfLines={1}>
-					Rp {item.harga}
-				</Text>
-			</View>
-			<View style={[styles.cellContainer, { flex: 1.5 }]}>
-				<Text style={styles.cellText} numberOfLines={1}>
-					{item.stok}
-				</Text>
-			</View>
-			<View
-				style={[
-					styles.cellContainer,
-					{ flex: 1.5, alignItems: "center", justifyContent: "center" },
-				]}
+			<Text style={[styles.tableCell, { width: width * 0.25 }]}>
+				{item.nama_barang}
+			</Text>
+			<Text style={[styles.tableCell, { width: width * 0.2 }]}>{item.sku}</Text>
+			<Text
+				style={[styles.tableCell, { width: width * 0.2, textAlign: "right" }]}
 			>
+				Rp {item.harga.toLocaleString("id-ID")}
+			</Text>
+			<Text
+				style={[styles.tableCell, { width: width * 0.15, textAlign: "center" }]}
+			>
+				{item.stok}
+			</Text>
+			<View style={[styles.actionCell, { width: width * 0.2 }]}>
 				<TouchableOpacity
-					style={styles.actionButton}
 					onPress={() =>
 						setActiveDropdown(activeDropdown === item.id ? null : item.id)
 					}
+					style={styles.actionButton}
 				>
-					<Text style={styles.actionButtonText}>Aksi</Text>
+					<AntDesign name="ellipsis1" size={24} color="#00d4ff" />
 				</TouchableOpacity>
 				{activeDropdown === item.id && (
 					<View style={styles.dropdownMenu}>
 						<TouchableOpacity
-							style={styles.dropdownOption}
+							style={styles.dropdownItem}
 							onPress={() => {
-								handleEdit(item);
+								navigation.navigate("EditItem", {
+									item: item,
+								});
 								setActiveDropdown(null);
 							}}
 						>
-							<Text style={styles.dropdownOptionText}>Edit</Text>
+							<Text style={styles.dropdownItemText}>Edit</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
-							style={styles.dropdownOptionDelete}
+							style={styles.dropdownItem}
 							onPress={() => {
 								handleDelete(item.id);
 								setActiveDropdown(null);
 							}}
 						>
-							<Text style={styles.dropdownOptionText}>Hapus</Text>
+							<Text style={styles.dropdownItemText}>Hapus</Text>
 						</TouchableOpacity>
 					</View>
 				)}
@@ -197,166 +285,114 @@ export default function StockManagement() {
 		</View>
 	);
 
-	if (loading) {
-		return (
-			<View style={styles.loadingContainer}>
-				<Text style={styles.loadingText}>Memuat Data...</Text>
-			</View>
-		);
-	}
-
 	return (
-		// Gunakan SafeAreaView di sini
 		<SafeAreaView style={styles.container}>
-			<StatusBar barStyle="light-content" backgroundColor="#0f1419" />
+			<StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
 			<View style={styles.header}>
 				<Text style={styles.title}>Manajemen Stok</Text>
-				<Text style={styles.subtitle}>
-					Kelola inventaris barang Anda dengan mudah.
-				</Text>
+				<Text style={styles.subtitle}>Kelola daftar barang Anda</Text>
 			</View>
 
-			<View style={styles.searchAndSortContainer}>
+			<View style={styles.searchContainer}>
 				<TextInput
 					style={styles.searchInput}
-					placeholder="Cari Nama atau SKU Barang"
+					placeholder="Cari barang (nama/sku)..."
 					placeholderTextColor="#b0b3b8"
-					onChangeText={setSearchText}
 					value={searchText}
+					onChangeText={setSearchText}
 				/>
-				<Dropdown
-					style={[styles.dropdown, isFocus && { borderColor: "#007bff" }]}
-					placeholderStyle={styles.placeholderStyle}
-					selectedTextStyle={styles.selectedTextStyle}
-					iconStyle={styles.iconStyle}
-					data={sortOptions}
-					search={false}
-					maxHeight={300}
-					labelField="label"
-					valueField="value"
-					placeholder={!isFocus ? "Urutkan Berdasarkan" : "..."}
-					value={sortOption}
-					onFocus={() => setIsFocus(true)}
-					onBlur={() => setIsFocus(false)}
-					onChange={(item) => {
-						setSortOption(item.value);
-						setIsFocus(false);
-					}}
-					renderRightIcon={() => (
-						<AntDesign
-							style={styles.icon}
-							color={isFocus ? "#007bff" : "white"}
-							name="downcircleo"
-							size={20}
+				<TouchableOpacity
+					style={styles.scanButton}
+					onPress={() => setShowScanner(true)}
+				>
+					<AntDesign name="barcode" size={24} color="white" />
+				</TouchableOpacity>
+			</View>
+
+			{/* Dropdown sortOption akan dihapus, pengurutan akan dilakukan dengan mengklik header */}
+			{/*
+			<Dropdown
+				style={[styles.dropdown, isFocus && { borderColor: "blue" }]}
+				placeholderStyle={styles.placeholderStyle}
+				selectedTextStyle={styles.selectedTextStyle}
+				inputSearchStyle={styles.inputSearchStyle}
+				iconStyle={styles.iconStyle}
+				data={[
+					{ label: "Nama Barang", value: "nama_barang" },
+					{ label: "Stok", value: "stok" },
+					{ label: "Harga", value: "harga" },
+				]}
+				maxHeight={300}
+				labelField="label"
+				valueField="value"
+				placeholder={!isFocus ? "Urutkan berdasarkan..." : "..."}
+				value={sortOption}
+				onFocus={() => setIsFocus(true)}
+				onBlur={() => setIsFocus(false)}
+				onChange={(item) => {
+					setSortOption(item.value as SortKey);
+					setIsFocus(false);
+				}}
+			/>
+			*/}
+
+			<ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
+				<View style={styles.table}>
+					<View style={styles.tableHeader}>
+						<TouchableOpacity
+							style={[styles.headerCell, { width: width * 0.25 }]}
+							onPress={() => handleSort("nama_barang")}
+						>
+							<Text style={styles.headerText}>Nama Barang</Text>
+							{getSortIcon("nama_barang")}
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.headerCell, { width: width * 0.2 }]}
+							onPress={() => handleSort("sku")}
+						>
+							<Text style={styles.headerText}>SKU</Text>
+							{getSortIcon("sku")}
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.headerCell, { width: width * 0.2 }]}
+							onPress={() => handleSort("harga")}
+						>
+							<Text style={styles.headerText}>Harga</Text>
+							{getSortIcon("harga")}
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.headerCell, { width: width * 0.15 }]}
+							onPress={() => handleSort("stok")}
+						>
+							<Text style={styles.headerText}>Stok</Text>
+							{getSortIcon("stok")}
+						</TouchableOpacity>
+						<View style={[styles.headerCell, { width: width * 0.2 }]}>
+							<Text style={styles.headerText}>Aksi</Text>
+						</View>
+					</View>
+					{loading ? (
+						<Text style={styles.loadingText}>Memuat data...</Text>
+					) : items.length === 0 ? (
+						<Text style={styles.emptyText}>Tidak ada barang tersedia.</Text>
+					) : (
+						<FlatList
+							data={items}
+							renderItem={renderItem}
+							keyExtractor={(item) => item.id.toString()}
+							contentContainerStyle={styles.tableContent}
 						/>
 					)}
-				/>
-			</View>
-
-			{/* New button container */}
-			<View style={styles.actionButtonsContainer}>
-				<TouchableOpacity
-					style={styles.scanSearchButton} // Reusing previous scan button style
-					onPress={() => {
-						setScanned(false);
-						setShowScanner(true);
-					}}
-				>
-					<Text style={styles.scanSearchButtonText}>Scan Barcode</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={styles.addButton}
-					onPress={() => navigation.navigate("AddItem")}
-				>
-					<Text style={styles.addButtonText}>Tambah Barang</Text>
-				</TouchableOpacity>
-			</View>
-
-			<View style={styles.tableContainer}>
-				<Text style={styles.listTitle}>
-					Daftar Barang ({filteredAndSortedItems.length} entri)
-				</Text>
-				<View style={styles.table}>
-					<FlatList
-						data={filteredAndSortedItems}
-						ListHeaderComponent={TableHeader}
-						renderItem={renderItem}
-						keyExtractor={(item) => item.id.toString()}
-						stickyHeaderIndices={[0]} // This makes the header sticky
-						ListEmptyComponent={
-							<View style={styles.emptyContainer}>
-								<Text style={styles.emptyText}>Tidak ada barang.</Text>
-							</View>
-						}
-						ItemSeparatorComponent={() => <View style={styles.separator} />}
-					/>
 				</View>
-			</View>
+			</ScrollView>
 
-			{/* Scanner Modal */}
-			<Modal
-				animationType="slide"
-				transparent={false}
-				visible={showScanner}
-				onRequestClose={() => {
-					setShowScanner(false);
-					setScanned(false);
-				}}
+			<TouchableOpacity
+				style={styles.addButton}
+				onPress={() => navigation.navigate("AddItem")}
 			>
-				{/* Permission check for camera */}
-				{!cameraPermission || !cameraPermission.granted ? (
-					<View style={styles.permissionContainer}>
-						<Text style={styles.permissionText}>
-							Kami memerlukan izin Anda untuk mengakses kamera untuk pemindaian
-							barcode.
-						</Text>
-						<TouchableOpacity
-							onPress={requestPermission}
-							style={styles.requestPermissionButton}
-						>
-							<Text style={styles.requestPermissionButtonText}>
-								Berikan Izin Kamera
-							</Text>
-						</TouchableOpacity>
-					</View>
-				) : (
-					<View style={styles.scannerContainer}>
-						<CameraView
-							onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-							barcodeScannerSettings={{
-								barcodeTypes: [
-									"ean13",
-									"upc_a",
-									"code128",
-									"code39",
-									"qr",
-									"pdf417",
-								],
-							}}
-							facing="back"
-							style={StyleSheet.absoluteFillObject}
-						/>
-						<View style={styles.overlay}>
-							<View style={styles.topOverlay} />
-							<View style={styles.middleOverlay}>
-								<View style={styles.leftOverlay} />
-								<View style={styles.scanBox} />
-								<View style={styles.rightOverlay} />
-							</View>
-							<View style={styles.bottomOverlay} />
-						</View>
-						<TouchableOpacity
-							style={styles.closeScannerButton}
-							onPress={() => {
-								setShowScanner(false);
-								setScanned(false);
-							}}
-						>
-							<Text style={styles.closeScannerButtonText}>Tutup Scanner</Text>
-						</TouchableOpacity>
-					</View>
-				)}
-			</Modal>
+				<AntDesign name="pluscircle" size={24} color="white" />
+				<Text style={styles.addButtonText}>Tambah Barang Baru</Text>
+			</TouchableOpacity>
 		</SafeAreaView>
 	);
 }
@@ -364,19 +400,9 @@ export default function StockManagement() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
-		marginBottom: 15 + (StatusBar.currentHeight || 0), // Add some bottom margin for better spacing, helps avoid bottom nav bar
-		backgroundColor: "#0f1419", // Dark background
-	},
-	loadingContainer: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
 		backgroundColor: "#0f1419",
-	},
-	loadingText: {
-		color: "white",
-		fontSize: 18,
+		paddingTop: StatusBar.currentHeight || 0, // Tambahkan ruang di bagian atas
+		marginBottom: 15 + (StatusBar.currentHeight || 0), // Tambahkan ruang di bagian bawah
 	},
 	header: {
 		alignItems: "center",
@@ -386,128 +412,102 @@ const styles = StyleSheet.create({
 		borderBottomColor: "rgba(0, 212, 255, 0.3)",
 	},
 	title: {
-		fontSize: 20,
+		fontSize: 24,
 		fontWeight: "bold",
 		color: "white",
 		marginBottom: 4,
 	},
 	subtitle: {
-		fontSize: 14,
+		fontSize: 16,
 		color: "#b0b3b8",
-		textAlign: "center",
 	},
-	searchAndSortContainer: {
+	searchContainer: {
 		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
 		paddingHorizontal: 16,
-		marginTop: 10,
+		marginTop: 16,
 		marginBottom: 10,
+		alignItems: "center",
 	},
 	searchInput: {
 		flex: 1,
-		height: 40,
-		backgroundColor: "rgba(255,255,255,0.05)",
-		color: "white",
-		paddingHorizontal: 12,
-		borderRadius: 8,
-		marginRight: 10,
+		height: 50,
+		backgroundColor: "rgba(255, 255, 255, 0.1)",
+		borderRadius: 10,
+		paddingHorizontal: 15,
 		fontSize: 16,
+		color: "white",
+		marginRight: 10,
 		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderColor: "rgba(0, 212, 255, 0.3)",
 	},
+	scanButton: {
+		backgroundColor: "#00d4ff",
+		borderRadius: 10,
+		padding: 13,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	// Dropdown styles (tetap ada meskipun dropdown untuk sorting dihapus, mungkin digunakan di tempat lain)
 	dropdown: {
-		height: 40,
-		width: Dimensions.get("window").width * 0.35,
-		borderColor: "rgba(255,255,255,0.2)",
-		borderWidth: 1,
+		height: 50,
+		borderColor: "gray",
+		borderWidth: 0.5,
 		borderRadius: 8,
 		paddingHorizontal: 8,
-		backgroundColor: "rgba(255,255,255,0.05)",
+		marginHorizontal: 16,
+		marginTop: 10,
+		backgroundColor: "rgba(255, 255, 255, 0.1)",
+	},
+	icon: {
+		marginRight: 5,
 	},
 	placeholderStyle: {
-		fontSize: 14,
+		fontSize: 16,
 		color: "#b0b3b8",
 	},
 	selectedTextStyle: {
-		fontSize: 14,
+		fontSize: 16,
 		color: "white",
 	},
 	iconStyle: {
 		width: 20,
 		height: 20,
 	},
-	icon: {
-		marginRight: 5,
-	},
-	actionButtonsContainer: {
-		flexDirection: "row",
-		justifyContent: "center",
-		marginTop: 10,
-		marginBottom: 20,
-		paddingHorizontal: 16,
-		gap: 10,
-	},
-	addButton: {
-		backgroundColor: "#007bff",
-		paddingVertical: 12,
-		paddingHorizontal: 20,
-		borderRadius: 8,
-		flex: 1,
-		alignItems: "center",
-	},
-	addButtonText: {
-		color: "white",
+	inputSearchStyle: {
+		height: 40,
 		fontSize: 16,
-		fontWeight: "bold",
-	},
-	scanSearchButton: {
-		backgroundColor: "#28a745",
-		paddingVertical: 12,
-		paddingHorizontal: 15,
-		borderRadius: 8,
-		alignItems: "center",
-		justifyContent: "center",
-		flex: 1,
-	},
-	scanSearchButtonText: {
-		color: "white",
-		fontSize: 16,
-		fontWeight: "bold",
-	},
-	tableContainer: {
-		flex: 1,
-		paddingHorizontal: 16,
-		paddingBottom: 20,
-		marginTop: 0,
-	},
-	listTitle: {
-		fontSize: 18,
-		fontWeight: "bold",
-		color: "white",
-		marginBottom: 12,
 	},
 	table: {
 		flex: 1,
-		backgroundColor: "rgba(255, 255, 255, 0.03)", // Latar belakang tabel keseluruhan (bisa tetap semi-transparan)
+		backgroundColor: "rgba(255, 255, 255, 0.03)",
 		borderRadius: 12,
+		marginHorizontal: 16,
+		marginTop: 16,
 		borderWidth: 1,
 		borderColor: "rgba(255, 255, 255, 0.1)",
-		overflow: "hidden",
 	},
 	tableHeader: {
 		flexDirection: "row",
-		backgroundColor: "#1A2533", // Warna baru yang solid dan gelap, sesuaikan dengan tema Anda
+		backgroundColor: "rgba(0, 212, 255, 0.1)",
 		paddingVertical: 12,
 		paddingHorizontal: 12,
 		borderBottomWidth: 1,
-		borderBottomColor: "rgba(0, 212, 255, 0.2)", // Garis bawah bisa tetap ada
+		borderBottomColor: "rgba(0, 212, 255, 0.2)",
+	},
+	headerCell: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: 4,
 	},
 	headerText: {
 		fontSize: 14,
 		fontWeight: "bold",
-		color: "#00d4ff", // Warna teks header
+		color: "#00d4ff",
 		textAlign: "center",
+	},
+	sortIcon: {
+		marginLeft: 5,
 	},
 	tableRow: {
 		flexDirection: "row",
@@ -515,77 +515,83 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		alignItems: "center",
 		minHeight: 50,
-		// Tidak perlu background di sini jika ingin menggunakan background dari styles.table
+		borderBottomWidth: 1,
+		borderBottomColor: "rgba(255, 255, 255, 0.05)",
 	},
-	separator: {
-		height: 1,
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
-		marginHorizontal: 12,
-	},
-	cellContainer: {
-		justifyContent: "center",
-		paddingHorizontal: 4,
-	},
-	cellText: {
+	tableCell: {
 		fontSize: 13,
 		color: "white",
-		textAlign: "center",
+		paddingHorizontal: 4,
+		// textAlign: "center", // Hapus atau timpa ini jika ingin rata kiri/kanan spesifik
+	},
+	actionCell: {
+		flexDirection: "row",
+		justifyContent: "center",
+		alignItems: "center",
+		position: "relative",
 	},
 	actionButton: {
-		backgroundColor: "#ffc107",
-		paddingHorizontal: 10,
-		paddingVertical: 6,
-		borderRadius: 6,
-		minWidth: 50,
-	},
-	actionButtonText: {
-		fontSize: 12,
-		color: "#333",
-		textAlign: "center",
-		fontWeight: "bold",
+		padding: 5,
 	},
 	dropdownMenu: {
 		position: "absolute",
-		top: "100%",
 		right: 0,
-		backgroundColor: "#2c3e50",
+		top: "100%", // Tampilkan di bawah tombol
+		backgroundColor: "#1e2a38",
 		borderRadius: 8,
+		elevation: 5,
+		zIndex: 10,
+		width: 100, // Lebar dropdown menu
 		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderColor: "rgba(0, 212, 255, 0.3)",
+	},
+	dropdownItem: {
+		padding: 10,
+		borderBottomWidth: 1,
+		borderBottomColor: "rgba(255, 255, 255, 0.05)",
+	},
+	dropdownItemText: {
+		color: "white",
+		textAlign: "center",
+		fontSize: 14,
+	},
+	tableContent: {
+		paddingBottom: 20, // Untuk memberikan ruang di bagian bawah FlatList
+	},
+	loadingText: {
+		color: "#b0b3b8",
+		textAlign: "center",
+		paddingVertical: 20,
+		fontSize: 16,
+	},
+	emptyText: {
+		color: "#b0b3b8",
+		textAlign: "center",
+		paddingVertical: 20,
+		fontSize: 16,
+	},
+	addButton: {
+		flexDirection: "row",
+		backgroundColor: "#28a745",
+		paddingVertical: 15,
+		paddingHorizontal: 20,
+		borderRadius: 10,
+		alignItems: "center",
+		justifyContent: "center",
+		margin: 16,
 		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.25,
 		shadowRadius: 3.84,
 		elevation: 5,
-		zIndex: 1000,
-		minWidth: 100,
-		overflow: "hidden",
 	},
-	dropdownOption: {
-		paddingVertical: 10,
-		paddingHorizontal: 15,
-		borderBottomWidth: 1,
-		borderBottomColor: "rgba(255, 255, 255, 0.05)",
-	},
-	dropdownOptionDelete: {
-		paddingVertical: 10,
-		paddingHorizontal: 15,
-		backgroundColor: "#dc3545",
-	},
-	dropdownOptionText: {
+	addButtonText: {
 		color: "white",
-		fontSize: 14,
-		textAlign: "left",
+		fontSize: 18,
+		fontWeight: "bold",
+		marginLeft: 10,
 	},
-	emptyContainer: {
-		alignItems: "center",
-		paddingVertical: 40,
-	},
-	emptyText: {
-		color: "#b0b3b8",
-		fontSize: 16,
-		fontStyle: "italic",
-	},
+	// Scanner styles - tidak ada perubahan, tetap seperti semula
 	permissionContainer: {
 		flex: 1,
 		justifyContent: "center",
@@ -639,31 +645,51 @@ const styles = StyleSheet.create({
 	topOverlay: {
 		flex: 1,
 		width: "100%",
-		backgroundColor: "rgba(0,0,0,0.5)",
+		backgroundColor: "rgba(0,0,0,0.6)",
 	},
 	middleOverlay: {
 		flexDirection: "row",
 		width: "100%",
-		height: width * 0.7,
+		height: width * 0.6, // Ukuran frame barcode
 	},
-	leftOverlay: {
+	overlaySide: {
 		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
+		backgroundColor: "rgba(0,0,0,0.6)",
 	},
-	scanBox: {
-		width: width * 0.7,
-		height: width * 0.7,
+	barcodeFrame: {
+		width: width * 0.7, // Lebar frame barcode
 		borderColor: "#00d4ff",
 		borderWidth: 2,
 		borderRadius: 10,
 	},
-	rightOverlay: {
-		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
-	},
 	bottomOverlay: {
 		flex: 1,
 		width: "100%",
-		backgroundColor: "rgba(0,0,0,0.5)",
+		backgroundColor: "rgba(0,0,0,0.6)",
+	},
+	scanResultOverlay: {
+		position: "absolute",
+		bottom: 100,
+		backgroundColor: "rgba(0,0,0,0.7)",
+		padding: 15,
+		borderRadius: 10,
+		alignItems: "center",
+		zIndex: 1,
+	},
+	scanResultText: {
+		color: "white",
+		fontSize: 16,
+		marginBottom: 10,
+	},
+	scanAgainButton: {
+		backgroundColor: "#007bff",
+		paddingVertical: 10,
+		paddingHorizontal: 15,
+		borderRadius: 8,
+	},
+	scanAgainButtonText: {
+		color: "white",
+		fontSize: 14,
+		fontWeight: "bold",
 	},
 });

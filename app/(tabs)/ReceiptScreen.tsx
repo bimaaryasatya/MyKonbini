@@ -5,6 +5,7 @@ import {
 	type RouteProp,
 } from "@react-navigation/native";
 import * as Print from "expo-print";
+import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React from "react";
 import {
@@ -18,23 +19,28 @@ import {
 	View,
 } from "react-native";
 import { RootStackParamList } from "./StockStack"; // Import RootStackParamList
-import { CartItem } from "./TransactionScreen"; // Import CartItem for type consistency
+// Import tipe TransactionDetails dan CartItem dari database
+import { TransactionDetails } from "../database";
 
 // Define the type for the route prop in this screen
 type ReceiptScreenRouteProp = RouteProp<RootStackParamList, "ReceiptScreen">;
 
-interface TransactionDetails {
-	date: string;
-	items: CartItem[]; // Use CartItem for consistency
-	totalPrice: number;
-	cashReceived: number;
-	change: number;
-}
+// Interface TransactionDetails tidak perlu didefinisikan lagi di sini
+// Karena sudah diimpor dari database.tsx
 
 export default function ReceiptScreen() {
-	const navigation = useNavigation();
+	const navigation = useNavigation(); // Tidak perlu tipe eksplisit di sini jika tidak ada navigasi keluar
 	const route = useRoute<ReceiptScreenRouteProp>(); // Type the route hook
-	const { transactionDetails } = route.params; // Now TypeScript knows transactionDetails exists and its type
+	// Pastikan transactionDetails ada dan tipenya benar
+	const { transactionDetails, fromLogScreen } = route.params; // Sekarang TypeScript tahu transactionDetails exists dan its type
+
+	const handleBack = () => {
+		if (fromLogScreen) {
+			router.push("/logScreen");
+		} else {
+			navigation.goBack();
+		}
+	};
 
 	const generateReceiptHtml = (details: TransactionDetails) => {
 		const formattedDate = new Date(details.date).toLocaleString("id-ID", {
@@ -43,22 +49,20 @@ export default function ReceiptScreen() {
 			day: "numeric",
 			hour: "2-digit",
 			minute: "2-digit",
+			second: "2-digit",
+			hour12: false,
 		});
 
-		let itemsHtml = details.items
+		const itemsHtml = details.items
 			.map(
 				(item) => `
       <tr style="border-bottom: 1px dashed #ddd;">
-        <td style="padding: 8px 0; text-align: left; font-size: 14px;">${
-					item.nama_barang
-				}</td>
-        <td style="padding: 8px 0; text-align: center; font-size: 14px;">${
-					item.quantity
-				}</td>
-        <td style="padding: 8px 0; text-align: right; font-size: 14px;">Rp ${item.harga.toLocaleString(
+        <td style="padding: 5px 0;">${item.nama_barang} (${item.sku})</td>
+        <td style="padding: 5px 0; text-align: center;">${item.quantity}</td>
+        <td style="padding: 5px 0; text-align: right;">Rp${item.harga.toLocaleString(
 					"id-ID"
 				)}</td>
-        <td style="padding: 8px 0; text-align: right; font-size: 14px;">Rp ${(
+        <td style="padding: 5px 0; text-align: right;">Rp${(
 					item.harga * item.quantity
 				).toLocaleString("id-ID")}</td>
       </tr>
@@ -67,193 +71,161 @@ export default function ReceiptScreen() {
 			.join("");
 
 		return `
-      <h1 style="text-align: center; color: #333; margin-bottom: 5px;">CashierPro</h1>
-      <p style="text-align: center; color: #666; font-size: 12px; margin-bottom: 20px;">Struk Pembelian</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Struk Belanja</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; background-color: #f8f8f8; color: #333; }
+          .container { width: 100%; max-width: 400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+          h1 { text-align: center; color: #333; font-size: 24px; margin-bottom: 10px; }
+          .shop-info { text-align: center; margin-bottom: 20px; font-size: 14px; color: #555; }
+          .section-title { font-weight: bold; margin-top: 15px; margin-bottom: 8px; color: #333; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          th, td { text-align: left; padding: 8px 0; font-size: 14px; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          .summary-row { display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px dashed #eee; margin-top: 5px; }
+          .summary-label { font-weight: bold; font-size: 15px; }
+          .summary-value { font-weight: bold; font-size: 15px; color: #000; }
+          .total-row { border-top: 2px solid #333; padding-top: 10px; margin-top: 10px; }
+          .thank-you { text-align: center; margin-top: 25px; font-size: 14px; color: #555; }
+          .contact { text-align: center; font-size: 12px; color: #777; margin-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Struk Belanja</h1>
+          <div class="shop-info">
+            <p>Toko Contoh Jaya</p>
+            <p>Jl. Maju Mundur No. 123</p>
+            <p>Telp: 0812-3456-7890</p>
+            <p>Tanggal: ${formattedDate}</p>
+          </div>
 
-      <div style="border-top: 1px dashed #ddd; border-bottom: 1px dashed #ddd; padding: 10px 0; margin-bottom: 20px;">
-        <p style="font-size: 14px; margin: 5px 0;"><strong>Tanggal:</strong> ${formattedDate}</p>
-        <p style="font-size: 14px; margin: 5px 0;"><strong>Total Item:</strong> ${details.items.reduce(
-					(sum, item) => sum + item.quantity,
-					0
-				)}</p>
-      </div>
+          <div class="section-title">Detail Barang</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align: left;">Barang</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Harga Satuan</th>
+                <th style="text-align: right;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
 
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-        <thead>
-          <tr style="background-color: #f2f2f2;">
-            <th style="padding: 10px 0; text-align: left; font-size: 14px;">Barang</th>
-            <th style="padding: 10px 0; text-align: center; font-size: 14px;">Qty</th>
-            <th style="padding: 10px 0; text-align: right; font-size: 14px;">Harga</th>
-            <th style="padding: 10px 0; text-align: right; font-size: 14px;">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
-      </table>
+          <div class="summary-row total-row">
+            <span class="summary-label">Total Harga:</span>
+            <span class="summary-value">Rp${details.totalPrice.toLocaleString(
+							"id-ID"
+						)}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Tunai Diterima:</span>
+            <span class="summary-value">Rp${details.cashReceived.toLocaleString(
+							"id-ID"
+						)}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Kembalian:</span>
+            <span class="summary-value">Rp${details.change.toLocaleString(
+							"id-ID"
+						)}</span>
+          </div>
 
-      <div style="text-align: right; margin-top: 20px;">
-        <p style="font-size: 16px; margin: 5px 0;"><strong>Total Harga:</strong> Rp ${details.totalPrice.toLocaleString(
-					"id-ID"
-				)}</p>
-        <p style="font-size: 16px; margin: 5px 0;"><strong>Uang Diberikan:</strong> Rp ${details.cashReceived.toLocaleString(
-					"id-ID"
-				)}</p>
-        <p style="font-size: 16px; margin: 5px 0;"><strong>Kembalian:</strong> Rp ${details.change.toLocaleString(
-					"id-ID"
-				)}</p>
-      </div>
-
-      <p style="text-align: center; margin-top: 40px; color: #666; font-size: 12px;">Terima kasih telah berbelanja!</p>
+          <p class="thank-you">Terima kasih telah berbelanja!</p>
+          <p class="contact">Kunjungi kami lagi!</p>
+        </div>
+      </body>
+      </html>
     `;
 	};
 
-	const printReceipt = async () => {
-		try {
-			const html = generateReceiptHtml(transactionDetails);
-			await Print.printAsync({ html });
-		} catch (error) {
-			console.error("Error printing receipt:", error);
-			Alert.alert("Error", "Gagal mencetak struk.");
-		}
-	};
-
-	const sharePdfReceipt = async () => {
+	const createAndSharePdf = async () => {
 		try {
 			const html = generateReceiptHtml(transactionDetails);
 			const { uri } = await Print.printToFileAsync({ html });
-
 			if (uri) {
-				await Sharing.shareAsync(uri, {
-					UTI: ".pdf",
-					mimeType: "application/pdf",
-				});
+				await Sharing.shareAsync(uri);
 			}
 		} catch (error) {
-			console.error("Error sharing PDF:", error);
-			Alert.alert("Error", "Gagal membagikan struk sebagai PDF.");
+			Alert.alert("Error", "Gagal membuat atau membagikan PDF.");
+			console.error("Error creating or sharing PDF:", error);
 		}
-	};
-
-	const savePdfReceipt = async () => {
-		try {
-			const html = generateReceiptHtml(transactionDetails);
-			const { uri } = await Print.printToFileAsync({ html });
-
-			if (uri) {
-				Alert.alert("PDF Tersimpan", `Struk berhasil disimpan di: ${uri}`, [
-					{
-						text: "OK",
-						onPress: () => {
-							// Optionally navigate back or do something else
-						},
-					},
-				]);
-			}
-		} catch (error) {
-			console.error("Error saving PDF:", error);
-			Alert.alert("Error", "Gagal menyimpan struk sebagai PDF.");
-		}
-	};
-
-	const handleDeleteReceipt = () => {
-		Alert.alert(
-			"Hapus Struk",
-			"Apakah Anda yakin ingin menghapus struk ini? (Tindakan ini tidak akan membatalkan transaksi)",
-			[
-				{ text: "Batal", style: "cancel" },
-				{
-					text: "Hapus",
-					onPress: () => {
-						Alert.alert("Struk Dihapus", "Struk telah dihapus.");
-						navigation.goBack();
-					},
-				},
-			]
-		);
 	};
 
 	return (
 		<SafeAreaView style={styles.container}>
-			<StatusBar barStyle="light-content" backgroundColor="#0f1419" />
+			<StatusBar barStyle="dark-content" backgroundColor="#f8f8f8" />
 			<ScrollView contentContainerStyle={styles.scrollViewContent}>
-				<View style={styles.receiptCard}>
-					<Text style={styles.appName}>Toko Annaya Tegal</Text>
-					<Text style={styles.receiptTitle}>Struk Pembelian</Text>
-					<View style={styles.divider} />
-
-					<View style={styles.detailRow}>
-						<Text style={styles.detailLabel}>Tanggal & Waktu:</Text>
-						<Text style={styles.detailValue}>
+				<TouchableOpacity onPress={handleBack} style={styles.backButton}>
+					<Text style={styles.backButtonText}>{"< Kembali"}</Text>
+				</TouchableOpacity>
+				<View style={styles.receiptContainer}>
+					<Text style={styles.headerTitle}>Struk Belanja</Text>
+					<View style={styles.shopInfo}>
+						<Text style={styles.shopName}>Toko Contoh Jaya</Text>
+						<Text style={styles.shopAddress}>Jl. Maju Mundur No. 123</Text>
+						<Text style={styles.shopContact}>Telp: 0812-3456-7890</Text>
+						<Text style={styles.transactionDate}>
+							Tanggal:{" "}
 							{new Date(transactionDetails.date).toLocaleString("id-ID", {
 								year: "numeric",
 								month: "long",
 								day: "numeric",
 								hour: "2-digit",
 								minute: "2-digit",
+								second: "2-digit",
+								hour12: false,
 							})}
 						</Text>
 					</View>
 
-					<View style={styles.divider} />
-
-					<Text style={styles.sectionTitle}>Daftar Barang:</Text>
+					<Text style={styles.sectionTitle}>Detail Barang</Text>
 					{transactionDetails.items.map((item, index) => (
 						<View key={index} style={styles.itemRow}>
 							<Text style={styles.itemText}>
-								{item.nama_barang} (x{item.quantity})
+								{item.nama_barang} ({item.sku}) x {item.quantity}
 							</Text>
 							<Text style={styles.itemPrice}>
-								Rp {(item.harga * item.quantity).toLocaleString("id-ID")}
+								Rp{(item.harga * item.quantity).toLocaleString("id-ID")}
 							</Text>
 						</View>
 					))}
 
-					<View style={styles.divider} />
-
-					<View style={styles.summaryRow}>
-						<Text style={styles.summaryLabel}>Total Harga:</Text>
-						<Text style={styles.summaryValue}>
-							Rp {transactionDetails.totalPrice.toLocaleString("id-ID")}
-						</Text>
-					</View>
-					<View style={styles.summaryRow}>
-						<Text style={styles.summaryLabel}>Uang Diberikan:</Text>
-						<Text style={styles.summaryValue}>
-							Rp {transactionDetails.cashReceived.toLocaleString("id-ID")}
-						</Text>
-					</View>
-					<View style={styles.summaryRow}>
-						<Text style={styles.summaryLabel}>Kembalian:</Text>
-						<Text style={styles.summaryValue}>
-							Rp {transactionDetails.change.toLocaleString("id-ID")}
-						</Text>
+					<View style={styles.summaryContainer}>
+						<View style={styles.summaryRow}>
+							<Text style={styles.summaryLabel}>Total Harga:</Text>
+							<Text style={styles.summaryValue}>
+								Rp{transactionDetails.totalPrice.toLocaleString("id-ID")}
+							</Text>
+						</View>
+						<View style={styles.summaryRow}>
+							<Text style={styles.summaryLabel}>Tunai Diterima:</Text>
+							<Text style={styles.summaryValue}>
+								Rp{transactionDetails.cashReceived.toLocaleString("id-ID")}
+							</Text>
+						</View>
+						<View style={styles.summaryRow}>
+							<Text style={styles.summaryLabel}>Kembalian:</Text>
+							<Text style={styles.summaryValue}>
+								Rp{transactionDetails.change.toLocaleString("id-ID")}
+							</Text>
+						</View>
 					</View>
 
 					<Text style={styles.thankYou}>Terima kasih telah berbelanja!</Text>
-				</View>
+					<Text style={styles.contact}>Kunjungi kami lagi!</Text>
 
-				<View style={styles.buttonContainer}>
-					<TouchableOpacity style={styles.actionButton} onPress={printReceipt}>
-						<Text style={styles.actionButtonText}>Cetak Struk</Text>
-					</TouchableOpacity>
 					<TouchableOpacity
-						style={styles.actionButton}
-						onPress={sharePdfReceipt}
+						style={styles.printButton}
+						onPress={createAndSharePdf}
 					>
-						<Text style={styles.actionButtonText}>Bagikan PDF</Text>
-					</TouchableOpacity>
-					<TouchableOpacity
-						style={styles.actionButton}
-						onPress={savePdfReceipt}
-					>
-						<Text style={styles.actionButtonText}>Simpan PDF</Text>
-					</TouchableOpacity>
-					<TouchableOpacity
-						style={styles.deleteButton}
-						onPress={handleDeleteReceipt}
-					>
-						<Text style={styles.deleteButtonText}>Hapus Struk</Text>
+						<Text style={styles.printButtonText}>Cetak / Bagikan Struk</Text>
 					</TouchableOpacity>
 				</View>
 			</ScrollView>
@@ -264,56 +236,59 @@ export default function ReceiptScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		marginTop: StatusBar.currentHeight || 0,
-		marginBottom: 15 + (StatusBar.currentHeight || 0), // Add some space at the bottom
-		backgroundColor: "#0f1419",
+		backgroundColor: "#f8f8f8",
+		paddingTop: StatusBar.currentHeight || 0,
+		paddingBottom: 15 + (StatusBar.currentHeight || 0), // Add some space at the bottom
 	},
 	scrollViewContent: {
-		flexGrow: 1,
 		padding: 20,
+		alignItems: "center",
 	},
-	receiptCard: {
-		backgroundColor: "white",
+	receiptContainer: {
+		backgroundColor: "#fff",
 		borderRadius: 10,
 		padding: 20,
-		marginBottom: 20,
-		elevation: 5,
+		width: "100%",
+		maxWidth: 400,
 		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 3.84,
+		shadowOpacity: 0.1,
+		shadowRadius: 5,
+		elevation: 5,
 	},
-	appName: {
+	headerTitle: {
 		fontSize: 24,
 		fontWeight: "bold",
 		textAlign: "center",
-		marginBottom: 5,
+		marginBottom: 10,
 		color: "#333",
 	},
-	receiptTitle: {
-		fontSize: 18,
-		textAlign: "center",
-		color: "#666",
-		marginBottom: 15,
-	},
-	divider: {
+	shopInfo: {
+		alignItems: "center",
+		marginBottom: 20,
 		borderBottomWidth: 1,
 		borderBottomColor: "#eee",
-		marginVertical: 10,
+		paddingBottom: 15,
 	},
-	detailRow: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 5,
-	},
-	detailLabel: {
-		fontSize: 14,
-		color: "#333",
+	shopName: {
+		fontSize: 18,
 		fontWeight: "bold",
+		color: "#333",
 	},
-	detailValue: {
+	shopAddress: {
 		fontSize: 14,
 		color: "#666",
+		marginTop: 2,
+	},
+	shopContact: {
+		fontSize: 14,
+		color: "#666",
+		marginTop: 2,
+	},
+	transactionDate: {
+		fontSize: 14,
+		color: "#666",
+		marginTop: 5,
 	},
 	sectionTitle: {
 		fontSize: 16,
@@ -341,10 +316,16 @@ const styles = StyleSheet.create({
 		fontWeight: "bold",
 		marginLeft: 10,
 	},
+	summaryContainer: {
+		marginTop: 20,
+		borderTopWidth: 1,
+		borderTopColor: "#eee",
+		paddingTop: 15,
+	},
 	summaryRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginTop: 10,
+		marginBottom: 10,
 	},
 	summaryLabel: {
 		fontSize: 16,
@@ -360,37 +341,35 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		textAlign: "center",
 		marginTop: 30,
-		color: "#666",
-		fontStyle: "italic",
+		color: "#555",
 	},
-	buttonContainer: {
-		marginTop: 20,
-		alignItems: "center",
+	contact: {
+		fontSize: 12,
+		textAlign: "center",
+		marginTop: 5,
+		color: "#777",
 	},
-	actionButton: {
-		backgroundColor: "#00d4ff",
+	printButton: {
+		backgroundColor: "#007bff",
 		paddingVertical: 12,
-		paddingHorizontal: 25,
 		borderRadius: 8,
-		marginBottom: 10,
-		width: "80%",
 		alignItems: "center",
+		marginTop: 25,
 	},
-	actionButtonText: {
+	printButtonText: {
 		color: "white",
 		fontSize: 16,
 		fontWeight: "bold",
 	},
-	deleteButton: {
-		backgroundColor: "#e74c3c",
-		paddingVertical: 12,
-		paddingHorizontal: 25,
-		borderRadius: 8,
-		marginTop: 10,
-		width: "80%",
-		alignItems: "center",
+	backButton: {
+		marginBottom: 10,
+		paddingHorizontal: 10,
+		paddingVertical: 5,
+		backgroundColor: "#007bff",
+		borderRadius: 5,
+		alignSelf: "flex-start",
 	},
-	deleteButtonText: {
+	backButtonText: {
 		color: "white",
 		fontSize: 16,
 		fontWeight: "bold",

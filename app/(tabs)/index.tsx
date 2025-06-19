@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react"; // Pastikan useEffect dan useCallback ada
 import {
 	SafeAreaView,
 	ScrollView,
@@ -13,8 +13,65 @@ import {
 	View,
 } from "react-native";
 import "react-native-gesture-handler";
+import {
+	getExpenditureSummary,
+	getFinancialSummary,
+	initDB,
+} from "../database"; // Import getFinancialSummary dan initDB
+
+import { useFocusEffect } from "@react-navigation/native"; // Import useFocusEffect
 
 export default function HomeScreen() {
+	const [weeklyIncome, setWeeklyIncome] = useState<number | null>(null);
+	const [monthlyIncome, setMonthlyIncome] = useState<number | null>(null);
+	const [weeklyExpenditure, setWeeklyExpenditure] = useState<number | null>(
+		null
+	);
+	const [monthlyExpenditure, setMonthlyExpenditure] = useState<number | null>(
+		null
+	);
+
+	// Panggil initDB saat komponen pertama kali dimuat
+	useEffect(() => {
+		const initializeDatabase = async () => {
+			try {
+				await initDB();
+				console.log("Database initialized successfully.");
+			} catch (error) {
+				console.error("Failed to initialize database:", error);
+				// Anda bisa menambahkan Alert.alert di sini untuk memberi tahu pengguna jika ada masalah serius
+			}
+		};
+
+		initializeDatabase();
+	}, []); // Array dependensi kosong memastikan ini hanya berjalan sekali saat mount
+
+	const fetchFinancialData = useCallback(async () => {
+		try {
+			const weekly = await getFinancialSummary("weekly");
+			const monthly = await getFinancialSummary("monthly");
+			const weeklyExpenditure = await getExpenditureSummary("weekly");
+			const monthlyExpenditure = await getExpenditureSummary("monthly");
+			setWeeklyIncome(weekly);
+			setMonthlyIncome(monthly);
+			setWeeklyExpenditure(weeklyExpenditure);
+			setMonthlyExpenditure(monthlyExpenditure);
+		} catch (error) {
+			console.error("Error fetching financial data:", error);
+			setWeeklyIncome(0); // Set to 0 if there's an error
+			setMonthlyIncome(0); // Set to 0 if there's an error
+			setWeeklyExpenditure(0);
+			setMonthlyExpenditure(0);
+		}
+	}, []);
+
+	// Use useFocusEffect to refresh data when screen comes into focus
+	useFocusEffect(
+		useCallback(() => {
+			fetchFinancialData();
+		}, [fetchFinancialData])
+	);
+
 	const handleManageStock = () => {
 		// Navigate ke halaman manajemen stok
 		router.push("./StockStack");
@@ -22,12 +79,12 @@ export default function HomeScreen() {
 
 	const handleStartTransaction = () => {
 		// Navigate ke halaman transaksi
-		router.push("/TransactionScreen"); // Updated navigation
+		router.push("./TransactionScreen"); // Updated navigation
 	};
 
 	const handleViewLogs = () => {
 		// Navigate ke halaman log
-		router.push("/logScreen"); // Navigate to LogScreen within StockStack
+		router.push("./logScreen"); // Navigate to LogScreen within StockStack
 	};
 
 	return (
@@ -41,102 +98,95 @@ export default function HomeScreen() {
 				<ScrollView contentContainerStyle={styles.scrollViewContent}>
 					{/* Header */}
 					<View style={styles.header}>
-						<Text style={styles.greeting}>Selamat Datang</Text>
+						<Text style={styles.greeting}>Selamat Datang!</Text>
 						<Text style={styles.appName}>Toko Annaya Tegal</Text>
 					</View>
 
-					{/* Logo Section */}
 					<View style={styles.logoContainer}>
 						<View style={styles.logoBackground}>
 							<Ionicons name="storefront" size={80} color="#00d4ff" />
 						</View>
-						<Text style={styles.logoText}>Kasir Digital</Text>
-						<Text style={styles.logoSubtext}>
-							Solusi Modern untuk Bisnis Anda
-						</Text>
+						<Text style={styles.logoText}>Kasir Digital Toko Annaya</Text>
 					</View>
 
-					{/* Main Actions */}
-					<View style={styles.actionsContainer}>
-						{/* Transaction Button */}
+					{/* Primary Action Buttons */}
+					<View style={styles.primaryButtonsContainer}>
 						<TouchableOpacity
 							style={styles.primaryButton}
 							onPress={handleStartTransaction}
-							activeOpacity={0.8}
 						>
-							<LinearGradient
-								colors={["#00d4ff", "#0099cc"]}
-								style={styles.buttonGradient}
-							>
-								<Ionicons name="card" size={32} color="white" />
-								<Text style={styles.primaryButtonText}>Mulai Transaksi</Text>
-								<Text style={styles.buttonSubtext}>Proses penjualan baru</Text>
-							</LinearGradient>
+							<Ionicons name="cart-outline" size={30} color="#00d4ff" />
+							<Text style={styles.primaryButtonText}>Mulai Transaksi</Text>
 						</TouchableOpacity>
-
-						{/* Stock Management Button */}
 						<TouchableOpacity
-							style={styles.secondaryButton}
+							style={styles.primaryButton}
 							onPress={handleManageStock}
-							activeOpacity={0.8}
 						>
-							<View style={styles.secondaryButtonContent}>
-								<View style={styles.iconContainer}>
-									<Ionicons name="cube" size={28} color="#00d4ff" />
-								</View>
-								<View style={styles.buttonTextContainer}>
-									<Text style={styles.secondaryButtonText}>Manajemen Stok</Text>
-									<Text style={styles.secondaryButtonSubtext}>
-										Kelola inventori barang
-									</Text>
-								</View>
-								<Ionicons name="chevron-forward" size={24} color="#00d4ff" />
-							</View>
+							<Ionicons name="cube-outline" size={30} color="#00d4ff" />
+							<Text style={styles.primaryButtonText}>Kelola Stok</Text>
 						</TouchableOpacity>
+					</View>
 
-						{/* View Logs Button */}
+					{/* Secondary Action Buttons */}
+					<View style={styles.secondaryButtonsContainer}>
 						<TouchableOpacity
 							style={styles.secondaryButton}
 							onPress={handleViewLogs}
-							activeOpacity={0.8}
 						>
 							<View style={styles.secondaryButtonContent}>
 								<View style={styles.iconContainer}>
-									<Ionicons name="receipt" size={28} color="#00d4ff" />
+									<Ionicons name="receipt-outline" size={24} color="#00d4ff" />
 								</View>
 								<View style={styles.buttonTextContainer}>
 									<Text style={styles.secondaryButtonText}>Lihat Log</Text>
 									<Text style={styles.secondaryButtonSubtext}>
-										Lihat riwayat penambahan stok
+										Lihat riwayat penambahan stok dan transaksi
 									</Text>
 								</View>
-								<Ionicons name="chevron-forward" size={24} color="#00d4ff" />
 							</View>
 						</TouchableOpacity>
+						{/* Tombol Laporan Keuangan telah dihapus dari sini */}
 					</View>
 
-					{/* Quick Stats */}
+					{/* Financial Report Section (Tetap ada) */}
 					<View style={styles.statsContainer}>
-						<View style={styles.statsRow}>
-							<View style={styles.statItem}>
-								<Ionicons name="trending-up" size={24} color="#4CAF50" />
-								<Text style={styles.statNumber}>142</Text>
-								<Text style={styles.statLabel}>Transaksi Hari Ini</Text>
-							</View>
-							<View style={styles.statDivider} />
-							<View style={styles.statItem}>
-								<Ionicons name="wallet" size={24} color="#FF9800" />
-								<Text style={styles.statNumber}>Rp 2.5M</Text>
-								<Text style={styles.statLabel}>Total Penjualan</Text>
-							</View>
+						<Text style={styles.statsTitle}>Ringkasan Pemasukan</Text>
+						<View style={styles.statRow}>
+							<Text style={styles.statLabel}>Minggu Ini:</Text>
+							<Text style={styles.statValue}>
+								Rp{" "}
+								{weeklyIncome !== null
+									? weeklyIncome.toLocaleString("id-ID")
+									: "..."}
+							</Text>
 						</View>
-					</View>
-
-					{/* Footer */}
-					<View style={styles.footer}>
-						<Text style={styles.footerText}>
-							© 2025 MyKonbini - Powered by Ambatron Technologies
-						</Text>
+						<View style={styles.statRow}>
+							<Text style={styles.statLabel}>Bulan Ini:</Text>
+							<Text style={styles.statValue}>
+								Rp{" "}
+								{monthlyIncome !== null
+									? monthlyIncome.toLocaleString("id-ID")
+									: "..."}
+							</Text>
+						</View>
+						<View style={styles.statRow}>
+							<Text style={styles.statLabel}>Pengeluaran Minggu Ini:</Text>
+							<Text style={styles.statValue}>
+								Rp{" "}
+								{weeklyExpenditure !== null
+									? weeklyExpenditure.toLocaleString("id-ID")
+									: "..."}
+							</Text>
+						</View>
+						<View style={styles.statRow}>
+							<Text style={styles.statLabel}>Pengeluaran Bulan Ini:</Text>
+							<Text style={styles.statValue}>
+								Rp{" "}
+								{monthlyExpenditure !== null
+									? monthlyExpenditure.toLocaleString("id-ID")
+									: "..."}
+							</Text>
+						</View>
 					</View>
 				</ScrollView>
 			</LinearGradient>
@@ -147,94 +197,63 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		marginTop: StatusBar.currentHeight || 0, // Adjust for status bar height
 		backgroundColor: "#1a1a2e",
 		marginBottom: 15 + (StatusBar.currentHeight || 0), // Add some space at the bottom
 	},
 	gradient: {
 		flex: 1,
-		paddingHorizontal: 20,
 	},
 	scrollViewContent: {
-		flexGrow: 1, // Allows content to grow and enable scrolling
-		justifyContent: "space-between", // Distributes space between items
+		flexGrow: 1,
+		paddingVertical: StatusBar.currentHeight || 0,
+		paddingHorizontal: 20,
 	},
 	header: {
 		alignItems: "center",
+		marginBottom: 40,
 		marginTop: 20,
-		marginBottom: 30,
 	},
 	greeting: {
-		fontSize: 18,
-		color: "#b0b3b8",
-		fontWeight: "300",
+		fontSize: 28,
+		fontWeight: "bold",
+		color: "#ffffff",
 	},
 	appName: {
-		fontSize: 28,
-		color: "#ffffff",
-		fontWeight: "bold",
-		marginTop: 5,
-	},
-	logoContainer: {
-		alignItems: "center",
-		marginBottom: 40,
-	},
-	logoBackground: {
-		width: 140,
-		height: 140,
-		backgroundColor: "rgba(0, 212, 255, 0.1)",
-		borderRadius: 70,
-		justifyContent: "center",
-		alignItems: "center",
-		borderWidth: 2,
-		borderColor: "rgba(0, 212, 255, 0.3)",
-		marginBottom: 20,
-	},
-	logoText: {
-		fontSize: 24,
-		color: "#ffffff",
-		fontWeight: "bold",
-		marginBottom: 5,
-	},
-	logoSubtext: {
-		fontSize: 14,
-		color: "#b0b3b8",
-		textAlign: "center",
-	},
-	actionsContainer: {
-		// flex: 1, // Removed flex: 1 to allow ScrollView to manage height
-		justifyContent: "center",
-		paddingVertical: 20,
-	},
-	primaryButton: {
-		marginBottom: 20,
-		borderRadius: 16,
-		elevation: 8,
-		shadowColor: "#00d4ff",
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.3,
-		shadowRadius: 8,
-	},
-	buttonGradient: {
-		paddingVertical: 24,
-		paddingHorizontal: 32,
-		borderRadius: 16,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	primaryButtonText: {
-		fontSize: 20,
-		color: "white",
-		fontWeight: "bold",
-		marginTop: 8,
-	},
-	buttonSubtext: {
-		fontSize: 14,
-		color: "rgba(255, 255, 255, 0.8)",
+		fontSize: 16,
+		color: "#00d4ff",
 		marginTop: 4,
 	},
+	primaryButtonsContainer: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginBottom: 30,
+	},
+	primaryButton: {
+		backgroundColor: "#16213e", // Warna latar belakang yang lebih gelap
+		paddingVertical: 25,
+		paddingHorizontal: 15,
+		borderRadius: 15,
+		alignItems: "center",
+		width: "48%", // Sesuaikan lebar agar pas 2 kolom
+		borderWidth: 1,
+		borderColor: "rgba(0, 212, 255, 0.3)", // Border warna terang
+		shadowColor: "#00d4ff", // Efek shadow
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 5,
+		elevation: 8,
+	},
+	primaryButtonText: {
+		color: "white",
+		fontSize: 16,
+		fontWeight: "bold",
+		marginTop: 10,
+	},
+	secondaryButtonsContainer: {
+		marginBottom: 30,
+	},
 	secondaryButton: {
-		backgroundColor: "rgba(255, 255, 255, 0.05)",
+		backgroundColor: "rgba(255, 255, 255, 0.08)",
 		borderRadius: 16,
 		borderWidth: 1,
 		borderColor: "rgba(0, 212, 255, 0.3)",
@@ -268,47 +287,55 @@ const styles = StyleSheet.create({
 		color: "#b0b3b8",
 		marginTop: 2,
 	},
+	// Styles for Financial Report Section (Tetap ada)
 	statsContainer: {
 		backgroundColor: "rgba(255, 255, 255, 0.05)",
 		borderRadius: 16,
 		padding: 20,
 		marginVertical: 20,
 		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderColor: "rgba(0, 212, 255, 0.3)",
 	},
-	statsRow: {
-		flexDirection: "row",
-		alignItems: "center",
-	},
-	statItem: {
-		flex: 1,
-		alignItems: "center",
-	},
-	statDivider: {
-		width: 1,
-		height: 40,
-		backgroundColor: "rgba(255, 255, 255, 0.2)",
-		marginHorizontal: 20,
-	},
-	statNumber: {
+	statsTitle: {
 		fontSize: 20,
-		color: "#ffffff",
 		fontWeight: "bold",
-		marginTop: 8,
+		color: "#00d4ff",
+		marginBottom: 15,
+		textAlign: "center",
+	},
+	statRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginBottom: 10,
 	},
 	statLabel: {
-		fontSize: 12,
+		fontSize: 16,
 		color: "#b0b3b8",
-		textAlign: "center",
-		marginTop: 4,
 	},
-	footer: {
+	statValue: {
+		fontSize: 16,
+		fontWeight: "bold",
+		color: "white",
+	},
+	logoContainer: {
 		alignItems: "center",
-		paddingBottom: 20,
-		paddingTop: 10,
+		marginBottom: 40,
 	},
-	footerText: {
-		fontSize: 12,
-		color: "#7a7a7a",
+	logoBackground: {
+		width: 140,
+		height: 140,
+		backgroundColor: "rgba(0, 212, 255, 0.1)",
+		borderRadius: 70,
+		justifyContent: "center",
+		alignItems: "center",
+		borderWidth: 2,
+		borderColor: "rgba(0, 212, 255, 0.3)",
+		marginBottom: 20,
+	},
+	logoText: {
+		fontSize: 24,
+		color: "#ffffff",
+		fontWeight: "bold",
+		marginBottom: 5,
 	},
 });

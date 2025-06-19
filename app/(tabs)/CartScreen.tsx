@@ -20,9 +20,15 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { addLogEntry, getItemBySku, updateStock } from "../database";
-import { RootStackParamList } from "./StockStack"; // Import RootStackParamList
-import { CartItem } from "./TransactionScreen";
+// Perbarui import:
+import {
+	addTransactionLog, // Masih digunakan untuk update stok
+	getItemBySku, // <-- Tambahkan ini
+	TransactionDetails,
+	updateStock,
+} from "../database";
+import { RootStackParamList } from "./StockStack";
+import { CartItem } from "./TransactionScreen"; // Import CartItem dari sini
 
 // Define the types for the navigation and route props in this screen
 type CartScreenRouteProp = RouteProp<RootStackParamList, "CartScreen">;
@@ -38,164 +44,151 @@ export default function CartScreen() {
 	const [cashReceived, setCashReceived] = useState("");
 	const [change, setChange] = useState(0);
 
+	const handleCashReceivedChange = (text: string) => {
+		setCashReceived(text);
+		const totalPrice = calculateTotalPrice();
+		const received = parseFloat(text);
+		if (!isNaN(received)) {
+			const calculatedChange = received - totalPrice;
+			setChange(calculatedChange >= 0 ? calculatedChange : 0);
+		} else {
+			setChange(0);
+		}
+	};
+
 	useFocusEffect(
 		useCallback(() => {
 			if (route.params?.cartItems) {
-				// Now TypeScript knows route.params has cartItems
-				setCartItems(route.params.cartItems); // No need for 'as CartItem[]'
+				setCartItems(route.params.cartItems);
 			}
+			return () => {
+				// Cleanup jika diperlukan
+			};
 		}, [route.params?.cartItems])
 	);
 
 	const calculateTotalPrice = () => {
-		return cartItems.reduce(
-			(total, item) => total + item.harga * item.quantity,
-			0
-		);
+		return cartItems.reduce((sum, item) => sum + item.harga * item.quantity, 0);
 	};
 
-	const calculateTotalItems = () => {
-		return cartItems.reduce((total, item) => total + item.quantity, 0);
-	};
-
-	const handleQuantityChange = async (index: number, newQuantity: string) => {
-		const updatedCart = [...cartItems];
+	const handleQuantityChange = (id: number, newQuantity: string) => {
 		const quantity = parseInt(newQuantity);
-
-		if (isNaN(quantity) || quantity < 0) {
-			return;
-		}
-
-		if (quantity === 0) {
-			handleRemoveItem(index);
-			return;
-		}
-
-		const item = updatedCart[index];
-		const dbItem = await getItemBySku(item.sku);
-
-		if (dbItem && quantity > dbItem.stok) {
-			Alert.alert(
-				"Jumlah Barang Melebihi Stok",
-				"Jumlah yang dimasukkan melebihi stok yang tersedia. Apakah Anda yakin ingin melanjutkan? (Stok akan menjadi minus)",
-				[
-					{ text: "Batal", style: "cancel" },
-					{
-						text: "Lanjut",
-						onPress: () => {
-							updatedCart[index].quantity = quantity;
-							setCartItems(updatedCart);
-						},
-					},
-				]
+		if (!isNaN(quantity) && quantity >= 1) {
+			setCartItems((prevItems) =>
+				prevItems.map((item) =>
+					item.id === id ? { ...item, quantity: quantity } : item
+				)
 			);
-		} else {
-			updatedCart[index].quantity = quantity;
-			setCartItems(updatedCart);
+		} else if (newQuantity === "") {
+			setCartItems((prevItems) =>
+				prevItems.map((item) =>
+					item.id === id ? { ...item, quantity: 0 } : item
+				)
+			);
 		}
 	};
 
-	const handleRemoveItem = (index: number) => {
+	const handleRemoveItem = (id: number) => {
+		setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+	};
+
+	const handleProcessTransaction = async () => {
+		const totalPrice = calculateTotalPrice();
+		const received = parseFloat(cashReceived);
+
+		if (isNaN(received) || received < totalPrice) {
+			Alert.alert(
+				"Pembayaran Kurang",
+				`Uang yang diterima kurang dari total harga (Rp${totalPrice}).`
+			);
+			return;
+		}
+
+		const calculatedChange = received - totalPrice;
+		setChange(calculatedChange);
+
 		Alert.alert(
-			"Hapus Barang",
-			"Apakah Anda yakin ingin menghapus barang ini dari keranjang?",
+			"Konfirmasi Transaksi",
+			`Total: Rp${totalPrice}\nBayar: Rp${received}\nKembalian: Rp${calculatedChange}`,
 			[
-				{ text: "Batal", style: "cancel" },
 				{
-					text: "Hapus",
-					onPress: () => {
-						const updatedCart = [...cartItems];
-						updatedCart.splice(index, 1);
-						setCartItems(updatedCart);
+					text: "Batal",
+					style: "cancel",
+				},
+				{
+					text: "Bayar",
+					onPress: async () => {
+						try {
+							// 1. Update stock and add individual mutation logs
+							for (const item of cartItems) {
+								const currentStock = (await getItemBySku(item.sku))?.stok || 0;
+								const newStock = currentStock - item.quantity;
+
+								if (newStock < 0) {
+									Alert.alert(
+										"Stok Tidak Cukup",
+										`Stok ${item.nama_barang} tidak cukup.`
+									);
+									return;
+								}
+								await updateStock(
+									item.id,
+									item.nama_barang,
+									item.sku,
+									item.harga,
+									newStock
+								);
+
+								// addLogEntry sudah dipanggil di updateStock, jadi tidak perlu panggil lagi di sini
+								// jika updateStock sudah menangani log mutasi (jumlah_mutasi negatif)
+							}
+
+							// 2. Add full transaction log entry
+							const transactionDetails: TransactionDetails = {
+								date: new Date().toISOString(),
+								items: cartItems,
+								totalPrice: totalPrice,
+								cashReceived: received,
+								change: calculatedChange,
+							};
+							await addTransactionLog(transactionDetails); // <-- Panggil fungsi baru ini
+
+							Alert.alert("Sukses", "Transaksi berhasil!");
+							setCartItems([]);
+							setCashReceived("");
+							setChange(0);
+							// Emit event to refresh logs after successful transaction
+							navigation.navigate("ReceiptScreen", { transactionDetails }); // <-- Navigasi ke ReceiptScreen
+							// Emit event to refresh logs
+							// navigation.emit({ type: "refreshLogs" }); // Removed because emit is not available on navigation prop
+						} catch (error) {
+							Alert.alert("Error", "Gagal memproses transaksi.");
+							console.error("Error processing transaction:", error);
+						}
 					},
 				},
 			]
 		);
 	};
 
-	const handleCashInput = (text: string) => {
-		setCashReceived(text);
-		const total = calculateTotalPrice();
-		const cash = parseFloat(text);
-		if (!isNaN(cash)) {
-			setChange(cash - total);
-		} else {
-			setChange(0);
-		}
-	};
-
-	const handleCheckout = async () => {
-		const total = calculateTotalPrice();
-		const cash = parseFloat(cashReceived);
-
-		if (isNaN(cash) || cash < total) {
-			Alert.alert("Uang Kurang", "Jumlah uang yang diberikan tidak cukup.");
-			return;
-		}
-
-		try {
-			for (const item of cartItems) {
-				const currentItem = await getItemBySku(item.sku);
-				if (currentItem) {
-					const newStok = currentItem.stok - item.quantity;
-					await updateStock(
-						currentItem.id,
-						currentItem.nama_barang,
-						currentItem.sku,
-						currentItem.harga,
-						newStok
-					);
-					await addLogEntry(
-						item.nama_barang,
-						item.sku,
-						-item.quantity,
-						new Date().toISOString()
-					);
-				}
-			}
-
-			Alert.alert("Berhasil!", "Transaksi berhasil diselesaikan.");
-			navigation.navigate("ReceiptScreen", {
-				// This line is now correctly typed
-				transactionDetails: {
-					date: new Date().toISOString(),
-					items: cartItems,
-					totalPrice: total,
-					cashReceived: cash,
-					change: cash - total,
-				},
-			});
-
-			setCartItems([]);
-			setCashReceived("");
-			setChange(0);
-		} catch (error) {
-			console.error("Error during checkout:", error);
-			Alert.alert("Error", "Terjadi kesalahan saat menyelesaikan transaksi.");
-		}
-	};
-
-	const renderItem = ({ item, index }: { item: CartItem; index: number }) => (
-		<View style={styles.cartItem}>
+	const renderCartItem = ({ item }: { item: CartItem }) => (
+		<View style={styles.itemContainer}>
+			<Text style={styles.itemName}>
+				{item.nama_barang} ({item.sku})
+			</Text>
 			<View style={styles.itemDetails}>
-				<Text style={styles.itemName} numberOfLines={2}>
-					{item.nama_barang}
-				</Text>
-				<Text style={styles.itemPrice}>
-					Harga: Rp {item.harga.toLocaleString("id-ID")}
-				</Text>
-				<Text style={styles.itemSku}>SKU: {item.sku}</Text>
-			</View>
-			<View style={styles.quantityControl}>
 				<TextInput
-					style={styles.quantityInput}
+					style={styles.itemQuantityInput}
 					keyboardType="numeric"
-					value={item.quantity.toString()}
-					onChangeText={(text) => handleQuantityChange(index, text)}
+					value={String(item.quantity)}
+					onChangeText={(text) => handleQuantityChange(item.id, text)}
 				/>
+				<Text style={styles.itemPrice}>
+					Rp{(item.harga * item.quantity).toLocaleString("id-ID")}
+				</Text>
 				<TouchableOpacity
+					onPress={() => handleRemoveItem(item.id)}
 					style={styles.removeButton}
-					onPress={() => handleRemoveItem(index)}
 				>
 					<Text style={styles.removeButtonText}>Hapus</Text>
 				</TouchableOpacity>
@@ -203,61 +196,68 @@ export default function CartScreen() {
 		</View>
 	);
 
+	const totalPrice = calculateTotalPrice();
+
 	return (
 		<SafeAreaView style={styles.container}>
-			<StatusBar barStyle="light-content" backgroundColor="#0f1419" />
+			<StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
 			<KeyboardAvoidingView
+				style={{ flex: 1 }}
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
-				style={styles.keyboardAvoidingContainer}
-				keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -200}
 			>
-				<FlatList
-					data={cartItems}
-					keyExtractor={(item, index) => `${item.sku}-${index}`}
-					renderItem={renderItem}
-					ListEmptyComponent={
-						<View style={styles.emptyCart}>
-							<Text style={styles.emptyCartText}>Keranjang kosong.</Text>
-						</View>
-					}
-					contentContainerStyle={styles.flatListContent}
-					showsVerticalScrollIndicator={false}
-				/>
+				<View style={styles.header}>
+					<Text style={styles.title}>Keranjang Belanja</Text>
+					<Text style={styles.subtitle}>
+						Total {cartItems.length} item di keranjang
+					</Text>
+				</View>
+
+				{cartItems.length === 0 ? (
+					<View style={styles.emptyCart}>
+						<Text style={styles.emptyCartText}>Keranjang Anda kosong.</Text>
+					</View>
+				) : (
+					<FlatList
+						data={cartItems}
+						renderItem={renderCartItem}
+						keyExtractor={(item) => String(item.id)}
+						contentContainerStyle={styles.listContentContainer}
+					/>
+				)}
 
 				<View style={styles.summaryContainer}>
 					<View style={styles.summaryRow}>
-						<Text style={styles.summaryLabel}>Total Barang:</Text>
-						<Text style={styles.summaryValue}>
-							{calculateTotalItems()} item
-						</Text>
-					</View>
-					<View style={styles.summaryRow}>
 						<Text style={styles.summaryLabel}>Total Harga:</Text>
 						<Text style={styles.summaryValue}>
-							Rp {calculateTotalPrice().toLocaleString("id-ID")}
+							Rp{totalPrice.toLocaleString("id-ID")}
 						</Text>
 					</View>
 
 					<View style={styles.paymentContainer}>
-						<Text style={styles.paymentLabel}>Uang Diberikan:</Text>
+						<Text style={styles.summaryLabel}>Uang Diterima:</Text>
 						<TextInput
-							style={styles.cashInput}
+							style={styles.paymentInput}
 							keyboardType="numeric"
+							value={cashReceived}
+							onChangeText={handleCashReceivedChange}
 							placeholder="Masukkan jumlah uang"
 							placeholderTextColor="#b0b3b8"
-							value={cashReceived}
-							onChangeText={handleCashInput}
 						/>
-						<Text style={styles.changeText}>
-							Kembalian: Rp {change.toLocaleString("id-ID")}
+					</View>
+
+					<View style={styles.summaryRow}>
+						<Text style={styles.summaryLabel}>Kembalian:</Text>
+						<Text style={styles.summaryValue}>
+							Rp{change.toLocaleString("id-ID")}
 						</Text>
 					</View>
 
 					<TouchableOpacity
-						style={styles.checkoutButton}
-						onPress={handleCheckout}
+						style={styles.processButton}
+						onPress={handleProcessTransaction}
+						disabled={cartItems.length === 0}
 					>
-						<Text style={styles.checkoutButtonText}>Bayar / Checkout</Text>
+						<Text style={styles.processButtonText}>Proses Transaksi</Text>
 					</TouchableOpacity>
 				</View>
 			</KeyboardAvoidingView>
@@ -268,64 +268,69 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		marginTop: StatusBar.currentHeight || 0,
-		marginBottom: 16 + (StatusBar.currentHeight ?? 0), // Adjust for status bar height
-		backgroundColor: "#0f1419",
+		backgroundColor: "#1a1a2e",
 	},
-	keyboardAvoidingContainer: {
-		flex: 1,
+	header: {
+		alignItems: "center",
+		paddingHorizontal: 20,
+		paddingVertical: 16,
+		borderBottomWidth: 1,
+		borderBottomColor: "rgba(0, 212, 255, 0.3)",
 	},
-	flatListContent: {
+	title: {
+		fontSize: 20,
+		fontWeight: "bold",
+		color: "white",
+		marginBottom: 4,
+	},
+	subtitle: {
+		fontSize: 14,
+		color: "#b0b3b8",
+	},
+	listContentContainer: {
 		paddingHorizontal: 16,
-		paddingTop: 16,
-		paddingBottom: 10,
+		paddingVertical: 20,
+		paddingBottom: 20, // Add some space at the bottom
 	},
-	cartItem: {
-		flexDirection: "row",
+	itemContainer: {
 		backgroundColor: "rgba(255, 255, 255, 0.05)",
 		borderRadius: 10,
 		padding: 15,
 		marginBottom: 10,
-		alignItems: "center",
 		borderWidth: 1,
 		borderColor: "rgba(0, 212, 255, 0.2)",
-	},
-	itemDetails: {
-		flex: 1,
-		marginRight: 10,
 	},
 	itemName: {
 		fontSize: 16,
 		fontWeight: "bold",
 		color: "white",
-		marginBottom: 5,
+		marginBottom: 8,
 	},
-	itemPrice: {
-		fontSize: 14,
-		color: "#b0b3b8",
-	},
-	itemSku: {
-		fontSize: 12,
-		color: "#7a7a7a",
-		marginTop: 2,
-	},
-	quantityControl: {
+	itemDetails: {
 		flexDirection: "row",
 		alignItems: "center",
+		justifyContent: "space-between",
 	},
-	quantityInput: {
-		backgroundColor: "rgba(255, 255, 255, 0.1)",
+	itemQuantityInput: {
 		color: "white",
-		paddingVertical: 8,
-		paddingHorizontal: 10,
+		fontSize: 15,
+		borderWidth: 1,
+		borderColor: "rgba(0, 212, 255, 0.5)",
 		borderRadius: 5,
-		minWidth: 60,
+		paddingVertical: 5,
+		paddingHorizontal: 10,
+		width: 60,
 		textAlign: "center",
-		fontSize: 16,
 		marginRight: 10,
 	},
+	itemPrice: {
+		fontSize: 15,
+		color: "#00d4ff",
+		fontWeight: "bold",
+		flex: 1, // Take remaining space
+	},
 	removeButton: {
-		backgroundColor: "#e74c3c",
+		backgroundColor: "#dc3545",
 		paddingVertical: 8,
 		paddingHorizontal: 12,
 		borderRadius: 5,
@@ -369,38 +374,29 @@ const styles = StyleSheet.create({
 	paymentContainer: {
 		marginTop: 15,
 		borderTopWidth: 1,
-		borderTopColor: "rgba(255, 255, 255, 0.1)",
+		borderTopColor: "rgba(0, 212, 255, 0.2)",
 		paddingTop: 15,
+		marginBottom: 15,
 	},
-	paymentLabel: {
-		fontSize: 16,
-		color: "#b0b3b8",
-		marginBottom: 8,
-	},
-	cashInput: {
+	paymentInput: {
 		backgroundColor: "rgba(255, 255, 255, 0.1)",
 		color: "white",
-		padding: 12,
-		borderRadius: 8,
 		fontSize: 16,
-		marginBottom: 10,
+		padding: 10,
+		borderRadius: 8,
+		marginTop: 10,
+		borderWidth: 1,
+		borderColor: "rgba(0, 212, 255, 0.4)",
 	},
-	changeText: {
-		fontSize: 18,
-		fontWeight: "bold",
-		color: "#00d4ff",
-		textAlign: "right",
-	},
-	checkoutButton: {
+	processButton: {
 		backgroundColor: "#00d4ff",
 		paddingVertical: 15,
 		borderRadius: 10,
 		alignItems: "center",
 		marginTop: 20,
-		elevation: 5,
 	},
-	checkoutButtonText: {
-		color: "white",
+	processButtonText: {
+		color: "#1a1a2e",
 		fontSize: 18,
 		fontWeight: "bold",
 	},

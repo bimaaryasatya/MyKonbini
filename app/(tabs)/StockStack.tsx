@@ -10,7 +10,9 @@ import EditItemScreen from "./EditItemScreen";
 import LogScreen from "./logScreen";
 import ReceiptScreen from "./ReceiptScreen";
 import StockManagement from "./stockmanagement";
-import TransactionScreen, { CartItem } from "./TransactionScreen"; // Import CartItem for typing
+import TransactionScreen from "./TransactionScreen";
+// Pastikan CartItem diimpor untuk typing dari database.tsx atau TransactionScreen.tsx
+import { CartItem, TransactionDetails } from "../database"; // <-- Perbarui import ini
 
 // Define the parameter list for your stack navigator
 export type RootStackParamList = {
@@ -21,13 +23,8 @@ export type RootStackParamList = {
 	TransactionScreen: undefined; // No parameters passed directly on initial navigation
 	CartScreen: { cartItems: CartItem[] }; // CartScreen expects an array of CartItem
 	ReceiptScreen: {
-		transactionDetails: {
-			date: string;
-			items: CartItem[];
-			totalPrice: number;
-			cashReceived: number;
-			change: number;
-		};
+		transactionDetails: TransactionDetails; // <-- Gunakan TransactionDetails dari database
+		fromLogScreen?: boolean;
 	}; // ReceiptScreen expects transactionDetails
 };
 
@@ -67,12 +64,12 @@ export default function StockStack() {
 			<Stack.Screen
 				name="CartScreen"
 				component={CartScreen}
-				options={{ title: "Keranjang Belanja" }}
+				options={{ title: "Keranjang" }}
 			/>
 			<Stack.Screen
 				name="ReceiptScreen"
 				component={ReceiptScreen}
-				options={{ title: "Struk Pembelian" }}
+				options={{ title: "Struk Transaksi" }}
 			/>
 		</Stack.Navigator>
 	);

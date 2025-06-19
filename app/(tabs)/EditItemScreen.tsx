@@ -41,55 +41,50 @@ export default function EditItemScreen() {
 	const [scanned, setScanned] = useState(false);
 	const [showScanner, setShowScanner] = useState(false);
 
-	const [cameraPermission, requestPermission] = useCameraPermissions();
-
 	const navigation = useNavigation();
+	const [permission, requestPermission] = useCameraPermissions();
 
-	const handleBarCodeScanned = ({
-		type,
-		data,
-	}: {
-		type: string;
-		data: string;
-	}) => {
+	const handleBarCodeScanned = ({ data }: { data: string }) => {
 		setScanned(true);
-		setSku(data);
+		setSku(data); // Set the scanned SKU
 		setShowScanner(false);
-		Alert.alert(
-			"Barcode Ditemukan",
-			`Tipe: ${type}\nData: ${data}\nSKU telah diisi.`
-		);
+		Alert.alert("SKU Scanned", `SKU: ${data}`);
 	};
 
 	const handleUpdate = async () => {
 		if (!nama || !sku || !harga || !stok) {
-			Alert.alert("Validasi", "Semua field harus diisi");
+			Alert.alert("Error", "Semua kolom harus diisi.");
 			return;
 		}
+
+		const parsedHarga = parseFloat(harga);
+		const parsedStok = parseInt(stok);
+
+		if (isNaN(parsedHarga) || parsedHarga <= 0) {
+			Alert.alert("Error", "Harga harus angka positif.");
+			return;
+		}
+
+		if (isNaN(parsedStok) || parsedStok < 0) {
+			Alert.alert("Error", "Stok harus angka non-negatif.");
+			return;
+		}
+
 		try {
-			await updateStock(item.id, nama, sku, Number(harga), Number(stok));
-			Alert.alert("Sukses", "Barang berhasil diperbarui");
+			await updateStock(item.id, nama, sku, parsedHarga, parsedStok);
+			Alert.alert("Sukses", "Barang berhasil diperbarui!");
 			navigation.goBack();
 		} catch (error) {
-			Alert.alert("Error", "Gagal memperbarui data");
+			Alert.alert("Error", "Gagal memperbarui barang.");
 			console.error("Error updating item:", error);
 		}
 	};
 
-	if (!cameraPermission) {
-		return (
-			<View style={styles.permissionContainer}>
-				<Text style={styles.permissionText}>Memuat status izin kamera...</Text>
-			</View>
-		);
-	}
-
-	if (!cameraPermission.granted) {
+	if (!permission) {
 		return (
 			<View style={styles.permissionContainer}>
 				<Text style={styles.permissionText}>
-					Kami memerlukan izin Anda untuk mengakses kamera untuk pemindaian
-					barcode.
+					Membutuhkan izin kamera untuk menggunakan pemindai.
 				</Text>
 				<TouchableOpacity
 					onPress={requestPermission}
@@ -103,106 +98,106 @@ export default function EditItemScreen() {
 		);
 	}
 
+	if (!permission.granted) {
+		return (
+			<View style={styles.permissionContainer}>
+				<Text style={styles.permissionText}>Tidak ada akses ke kamera</Text>
+				<TouchableOpacity
+					onPress={requestPermission}
+					style={styles.requestPermissionButton}
+				>
+					<Text style={styles.requestPermissionButtonText}>
+						Berikan Izin Kamera
+					</Text>
+				</TouchableOpacity>
+			</View>
+		);
+	}
+
 	return (
-		// Gunakan SafeAreaView di sini
 		<SafeAreaView style={styles.container}>
 			<StatusBar barStyle="light-content" backgroundColor="#0f1419" />
-			<View style={styles.header}>
+			<View style={styles.content}>
 				<Text style={styles.title}>Edit Barang</Text>
-				<Text style={styles.subtitle}>
-					Perbarui detail untuk barang yang ada.
-				</Text>
-			</View>
 
-			<TouchableOpacity
-				style={styles.scanButton}
-				onPress={() => {
-					setScanned(false);
-					setShowScanner(true);
-				}}
-			>
-				<Text style={styles.scanButtonText}>Scan Barcode SKU</Text>
-			</TouchableOpacity>
-
-			<TextInput
-				style={styles.input}
-				placeholder="Nama Barang"
-				placeholderTextColor="#b0b3b8"
-				value={nama}
-				onChangeText={setNama}
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="SKU"
-				placeholderTextColor="#b0b3b8"
-				value={sku}
-				onChangeText={setSku}
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="Harga"
-				placeholderTextColor="#b0b3b8"
-				value={harga}
-				onChangeText={setHarga}
-				keyboardType="numeric"
-			/>
-			<TextInput
-				style={styles.input}
-				placeholder="Stok"
-				placeholderTextColor="#b0b3b8"
-				value={stok}
-				onChangeText={setStok}
-				keyboardType="numeric"
-			/>
-			<TouchableOpacity style={styles.button} onPress={handleUpdate}>
-				<Text style={styles.buttonText}>Perbarui</Text>
-			</TouchableOpacity>
-
-			<Modal
-				animationType="slide"
-				transparent={false}
-				visible={showScanner}
-				onRequestClose={() => {
-					setShowScanner(false);
-					setScanned(false);
-				}}
-			>
-				<View style={styles.scannerContainer}>
-					<CameraView
-						onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-						barcodeScannerSettings={{
-							barcodeTypes: [
-								"ean13",
-								"upc_a",
-								"code128",
-								"code39",
-								"qr",
-								"pdf417",
-							],
-						}}
-						facing="back"
-						style={StyleSheet.absoluteFillObject}
+				<TextInput
+					style={styles.input}
+					placeholder="Nama Barang"
+					placeholderTextColor="#999"
+					value={nama}
+					onChangeText={setNama}
+				/>
+				<View style={styles.skuInputContainer}>
+					<TextInput
+						style={[styles.input, { flex: 1, marginBottom: 0 }]}
+						placeholder="SKU Barang"
+						placeholderTextColor="#999"
+						value={sku}
+						onChangeText={setSku}
+						autoCapitalize="none"
 					/>
-					<View style={styles.overlay}>
-						<View style={styles.topOverlay} />
-						<View style={styles.middleOverlay}>
-							<View style={styles.leftOverlay} />
-							<View style={styles.scanBox} />
-							<View style={styles.rightOverlay} />
-						</View>
-						<View style={styles.bottomOverlay} />
-					</View>
 					<TouchableOpacity
-						style={styles.closeScannerButton}
+						style={styles.scanButton}
 						onPress={() => {
-							setShowScanner(false);
-							setScanned(false);
+							setScanned(false); // Reset scanned state
+							setShowScanner(true);
 						}}
 					>
-						<Text style={styles.closeScannerButtonText}>Tutup Scanner</Text>
+						<Text style={styles.scanButtonText}>Scan</Text>
 					</TouchableOpacity>
 				</View>
-			</Modal>
+				<TextInput
+					style={styles.input}
+					placeholder="Harga"
+					placeholderTextColor="#999"
+					keyboardType="numeric"
+					value={harga}
+					onChangeText={setHarga}
+				/>
+				<TextInput
+					style={styles.input}
+					placeholder="Stok"
+					placeholderTextColor="#999"
+					keyboardType="numeric"
+					value={stok}
+					onChangeText={setStok}
+				/>
+
+				<TouchableOpacity style={styles.button} onPress={handleUpdate}>
+					<Text style={styles.buttonText}>Simpan Perubahan</Text>
+				</TouchableOpacity>
+
+				<Modal
+					visible={showScanner}
+					onRequestClose={() => setShowScanner(false)}
+					animationType="slide"
+				>
+					<View style={styles.scannerContainer}>
+						<CameraView
+							onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+							barcodeScannerSettings={{
+								barcodeTypes: ["qr", "ean13", "code128"],
+							}}
+							style={StyleSheet.absoluteFillObject}
+						/>
+						<View style={styles.overlay}>
+							<View style={styles.topOverlay} />
+							<View style={styles.middleOverlay}>
+								<View style={styles.leftOverlay} />
+								<View style={styles.scanArea} />
+								<View style={styles.rightOverlay} />
+							</View>
+							<View style={styles.bottomOverlay} />
+						</View>
+						<TouchableOpacity
+							style={styles.closeScannerButton}
+							onPress={() => setShowScanner(false)}
+						>
+							<Text style={styles.closeScannerButtonText}>Tutup Pemindai</Text>
+						</TouchableOpacity>
+					</View>
+				</Modal>
+			</View>
 		</SafeAreaView>
 	);
 }
@@ -210,56 +205,58 @@ export default function EditItemScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#0f1419", // Dark background
-		paddingHorizontal: 20,
-		// paddingTop: StatusBar.currentHeight || 20, // Ini dipindahkan ke SafeAreaView
+		backgroundColor: "#0f1419",
 	},
-	header: {
+	content: {
+		flex: 1,
+		padding: 20,
 		alignItems: "center",
-		paddingVertical: 16,
-		borderBottomWidth: 1,
-		borderBottomColor: "rgba(0, 212, 255, 0.3)",
-		marginBottom: 20,
+		justifyContent: "center",
 	},
 	title: {
-		fontSize: 20,
+		fontSize: 24,
 		fontWeight: "bold",
 		color: "white",
-		marginBottom: 4,
-	},
-	subtitle: {
-		fontSize: 14,
-		color: "#b0b3b8",
-		textAlign: "center",
+		marginBottom: 30,
 	},
 	input: {
-		backgroundColor: "rgba(255,255,255,0.05)",
-		color: "white",
-		padding: 12,
+		width: "100%",
+		backgroundColor: "rgba(255, 255, 255, 0.1)",
 		borderRadius: 8,
-		marginBottom: 15,
+		paddingHorizontal: 15,
+		paddingVertical: 12,
 		fontSize: 16,
+		color: "white",
+		marginBottom: 15,
 		borderWidth: 1,
-		borderColor: "rgba(255, 255, 255, 0.1)",
+		borderColor: "rgba(0, 212, 255, 0.3)",
 	},
 	button: {
-		backgroundColor: "#007bff",
-		padding: 15,
+		backgroundColor: "#00d4ff",
+		paddingVertical: 12,
+		paddingHorizontal: 25,
 		borderRadius: 8,
+		marginTop: 20,
+		width: "100%",
 		alignItems: "center",
-		marginTop: 10,
 	},
 	buttonText: {
 		color: "white",
 		fontSize: 16,
 		fontWeight: "bold",
 	},
-	scanButton: {
-		backgroundColor: "#28a745",
-		padding: 15,
-		borderRadius: 8,
+	skuInputContainer: {
+		flexDirection: "row",
 		alignItems: "center",
-		marginBottom: 20,
+		width: "100%",
+		marginBottom: 15,
+	},
+	scanButton: {
+		backgroundColor: "#00d4ff",
+		paddingVertical: 12,
+		paddingHorizontal: 15,
+		borderRadius: 8,
+		marginLeft: 10,
 	},
 	scanButtonText: {
 		color: "white",
@@ -319,31 +316,31 @@ const styles = StyleSheet.create({
 	topOverlay: {
 		flex: 1,
 		width: "100%",
-		backgroundColor: "rgba(0,0,0,0.5)",
+		backgroundColor: "rgba(0,0,0,0.6)",
 	},
 	middleOverlay: {
 		flexDirection: "row",
 		width: "100%",
-		height: width * 0.7,
+		height: width * 0.6, // Adjust as needed
 	},
 	leftOverlay: {
 		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
+		backgroundColor: "rgba(0,0,0,0.6)",
 	},
-	scanBox: {
-		width: width * 0.7,
-		height: width * 0.7,
-		borderColor: "#00d4ff",
+	scanArea: {
+		width: width * 0.6, // Adjust as needed
+		height: width * 0.6,
 		borderWidth: 2,
+		borderColor: "#00d4ff",
 		borderRadius: 10,
 	},
 	rightOverlay: {
 		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
+		backgroundColor: "rgba(0,0,0,0.6)",
 	},
 	bottomOverlay: {
 		flex: 1,
 		width: "100%",
-		backgroundColor: "rgba(0,0,0,0.5)",
+		backgroundColor: "rgba(0,0,0,0.6)",
 	},
 });

@@ -40,7 +40,8 @@ export default function AddItemScreen() {
 	const [showScanner, setShowScanner] = useState(false);
 	const [showSkuInputModal, setShowSkuInputModal] = useState(false);
 	const [showMutationDetailModal, setShowMutationDetailModal] = useState(false);
-	const [showBatchConfirmationModal, setShowBatchConfirmationModal] = useState(false);
+	const [showBatchConfirmationModal, setShowBatchConfirmationModal] =
+		useState(false);
 	const [cameraPermission, requestPermission] = useCameraPermissions();
 	const navigation = useNavigation();
 	// State untuk menyimpan daftar barang yang akan dimutasi
