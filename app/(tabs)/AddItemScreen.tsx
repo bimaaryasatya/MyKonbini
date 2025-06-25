@@ -404,7 +404,6 @@ export default function AddItemScreen() {
 																size={20}
 																color="#d97706"
 															/>
-															<Text style={styles.actionButtonText}>Edit</Text>
 														</LinearGradient>
 													</TouchableOpacity>
 													<TouchableOpacity
@@ -425,7 +424,6 @@ export default function AddItemScreen() {
 																size={20}
 																color="#ef4444"
 															/>
-															<Text style={styles.actionButtonText}>Hapus</Text>
 														</LinearGradient>
 													</TouchableOpacity>
 												</View>

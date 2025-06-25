@@ -31,7 +31,7 @@ const COL_WIDTH_NAMA = 180; // Lebar untuk Nama Barang
 const COL_WIDTH_SKU = 120; // Lebar untuk SKU
 const COL_WIDTH_HARGA = 110; // Lebar untuk Harga
 const COL_WIDTH_STOK = 80; // Lebar untuk Stok
-const COL_WIDTH_AKSI = 80; // Lebar untuk Kolom Aksi
+const COL_WIDTH_AKSI = 120; // Lebar untuk Kolom Aksi (ditingkatkan untuk dua tombol)
 
 // Hitung total lebar tabel
 const TOTAL_TABLE_WIDTH =
@@ -55,7 +55,7 @@ export default function StockManagement() {
 
 	const [items, setItems] = useState<Barang[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+	// const [activeDropdown, setActiveDropdown] = useState<number | null>(null); // REMOVED
 	const [searchText, setSearchText] = useState("");
 	const [permission, requestPermission] = useCameraPermissions();
 	const [scanned, setScanned] = useState(false);
@@ -160,41 +160,22 @@ export default function StockManagement() {
 
 			<View style={styles.actionColumnData}>
 				<TouchableOpacity
-					style={styles.dropdownButton}
+					style={styles.actionButton}
 					onPress={() =>
-						setActiveDropdown(activeDropdown === item.id ? null : item.id)
+						navigation.navigate("EditItem", {
+							itemId: item.id,
+							itemSku: item.sku,
+						})
 					}
 				>
-					<Ionicons name="ellipsis-vertical" size={24} color="#64748b" />
+					<Ionicons name="create-outline" size={20} color="#3b82f6" />
 				</TouchableOpacity>
-
-				{activeDropdown === item.id && (
-					<View style={[styles.dropdownContainer, styles.liquidGlass]}>
-						<TouchableOpacity
-							style={styles.dropdownOption}
-							onPress={() => {
-								setActiveDropdown(null); // Tutup dropdown
-								navigation.navigate("EditItem", {
-									itemId: item.id,
-									itemSku: item.sku,
-								});
-							}}
-						>
-							<Ionicons name="create-outline" size={20} color="#3b82f6" />
-							<Text style={styles.dropdownOptionText}>Edit</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={styles.dropdownOption}
-							onPress={() => {
-								setActiveDropdown(null); // Tutup dropdown
-								handleDeleteItem(item.id, item.nama_barang);
-							}}
-						>
-							<Ionicons name="trash-outline" size={20} color="#ef4444" />
-							<Text style={styles.dropdownOptionText}>Hapus</Text>
-						</TouchableOpacity>
-					</View>
-				)}
+				<TouchableOpacity
+					style={[styles.actionButton, { marginLeft: 10 }]} // Added margin for separation
+					onPress={() => handleDeleteItem(item.id, item.nama_barang)}
+				>
+					<Ionicons name="trash-outline" size={20} color="#ef4444" />
+				</TouchableOpacity>
 			</View>
 		</View>
 	);
@@ -551,7 +532,6 @@ const styles = StyleSheet.create({
 	},
 	tableHeader: {
 		flexDirection: "row",
-		// justifyContent: "space-around", // Dihapus karena width sudah fix
 		alignItems: "center", // Pusatkan vertikal
 		backgroundColor: "rgba(255, 255, 255, 0.5)",
 		paddingVertical: 10,
@@ -569,7 +549,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 5,
-		// paddingHorizontal: 5, // Dihapus, padding dari tableHeader
 	},
 	columnSkuHeader: {
 		width: COL_WIDTH_SKU,
@@ -577,7 +556,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 5,
-		// paddingHorizontal: 5,
 	},
 	columnHargaHeader: {
 		width: COL_WIDTH_HARGA,
@@ -585,7 +563,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 5,
-		// paddingHorizontal: 5,
 	},
 	columnStokHeader: {
 		width: COL_WIDTH_STOK,
@@ -593,7 +570,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 5,
-		// paddingHorizontal: 5,
 	},
 	actionHeader: {
 		width: COL_WIDTH_AKSI,
@@ -601,7 +577,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 5,
-		// paddingHorizontal: 5,
 	},
 	sortButtonText: {
 		color: "#1e293b",
@@ -619,8 +594,7 @@ const styles = StyleSheet.create({
 		borderRadius: 16,
 		marginBottom: 10,
 		overflow: "visible",
-		zIndex: 1, // ZIndex default untuk setiap baris
-		// justifyContent: "flex-start", // Dihapus, width sudah fix
+		zIndex: 1, // Set default ZIndex
 	},
 	columnText: {
 		color: "#1e293b",
@@ -630,7 +604,6 @@ const styles = StyleSheet.create({
 	// Styles untuk setiap kolom data item - Menggunakan lebar dari konstanta
 	columnNamaData: {
 		width: COL_WIDTH_NAMA,
-		// paddingLeft dan paddingRight dihapus karena paddingHorizontal ada di itemRow
 		fontWeight: "600",
 		textAlign: "center", // Pusatkan teks di kolom Nama
 	},
@@ -647,43 +620,13 @@ const styles = StyleSheet.create({
 	},
 	actionColumnData: {
 		width: COL_WIDTH_AKSI,
-		position: "relative",
-		zIndex: 2,
-		alignItems: "center", // Pusatkan tombol ellipsis
-		justifyContent: "center",
-		// paddingRight dihapus
-	},
-	dropdownButton: {
-		padding: 5,
-	},
-	dropdownContainer: {
-		position: "absolute",
-		top: 40,
-		right: 0, // Rata kanan relatif terhadap kolom aksi
-		backgroundColor: "#f8fafc",
-		borderRadius: 12,
-		paddingVertical: 8,
-		paddingHorizontal: 5,
-		shadowColor: "rgba(0, 0, 0, 0.2)",
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.3,
-		shadowRadius: 10,
-		elevation: 10,
-		zIndex: 1000,
-		minWidth: 120,
-	},
-	dropdownOption: {
-		flexDirection: "row",
+		flexDirection: "row", // Arrange buttons horizontally
+		justifyContent: "center", // Center the buttons
 		alignItems: "center",
-		paddingVertical: 10,
-		paddingHorizontal: 10,
-		borderRadius: 8,
 	},
-	dropdownOptionText: {
-		marginLeft: 8,
-		fontSize: 16,
-		color: "#1e293b",
-		fontWeight: "600",
+	actionButton: {
+		padding: 5,
+		// You can add more styling here if you want distinct button looks
 	},
 	loadingText: {
 		textAlign: "center",

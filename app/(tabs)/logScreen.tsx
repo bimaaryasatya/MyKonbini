@@ -33,26 +33,88 @@ const { width } = Dimensions.get("window");
 
 type LogScreenNavigationProp = NavigationProp<RootStackParamList, "LogScreen">;
 
+// Define a new type for grouped mutation entries
+interface GroupedMutationEntry {
+	type: "groupedMutation";
+	timestamp: string;
+	entries: LogEntry[];
+	id: string; // Add an ID for keyExtractor
+}
+
+type DisplayLogEntry = CombinedLogEntry | GroupedMutationEntry;
+
 export default function LogScreen() {
-	const [logEntries, setLogEntries] = useState<CombinedLogEntry[]>([]);
+	const [logEntries, setLogEntries] = useState<DisplayLogEntry[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 	const [isMutationDetailModalVisible, setMutationDetailModalVisible] =
 		useState(false);
-	const [selectedMutationDetails, setSelectedMutationDetails] =
-		useState<LogEntry | null>(null);
+	const [selectedMutationGroupDetails, setSelectedMutationGroupDetails] =
+		useState<GroupedMutationEntry | null>(null);
+
+	const [filterType, setFilterType] = useState<
+		"all" | "mutation_in" | "mutation_out" | "transaction"
+	>("all");
 	const navigation = useNavigation<LogScreenNavigationProp>();
 	const isFocused = useIsFocused();
+
+	const groupAndSortLogs = (logs: CombinedLogEntry[]) => {
+		const groupedLogs: { [key: string]: DisplayLogEntry } = {};
+		const transactionTimestamps = new Set<string>();
+
+		// First pass: Identify transaction timestamps (with 1-second precision)
+		logs.forEach((log) => {
+			if (log.type === "transaction") {
+				// Use floor to ensure consistent grouping for timestamps, e.g., 2024-01-01T10:30:00.123 and 2024-01-01T10:30:00.456 are treated as same second
+				const transactionTimeKey = Math.floor(new Date(log.timestamp).getTime() / 1000) * 1000;
+				transactionTimestamps.add(transactionTimeKey.toString());
+				groupedLogs[transactionTimeKey.toString()] = log; // Add transaction directly
+			}
+		});
+
+		// Second pass: Group mutations, skipping those that match a transaction timestamp
+		logs.forEach((log) => {
+			if (log.type === "mutation") {
+				const mutationTimeKey = Math.floor(new Date(log.timestamp).getTime() / 1000) * 1000;
+
+				// Only process if this mutation's timestamp does NOT match a transaction timestamp
+				// AND it's an 'outgoing' mutation (jumlah_mutasi < 0)
+				// If it's an 'incoming' mutation, it should always be displayed as it's not directly related to a sale.
+				if (transactionTimestamps.has(mutationTimeKey.toString()) && log.jumlah_mutasi < 0) {
+					// This is an outgoing mutation directly related to a transaction, hide it.
+					return;
+				}
+
+				// If it's not linked to a transaction or it's an incoming mutation, group it normally.
+				const timestampKey = new Date(log.timestamp).toISOString().split('.')[0]; // Group by second for display consistency
+				if (!groupedLogs[timestampKey] || groupedLogs[timestampKey].type !== "groupedMutation") {
+					groupedLogs[timestampKey] = {
+						type: "groupedMutation",
+						timestamp: log.timestamp,
+						entries: [],
+						id: `grouped-${timestampKey}-${Math.random().toString(36).substr(2, 9)}`,
+					};
+				}
+				(groupedLogs[timestampKey] as GroupedMutationEntry).entries.push(log);
+			}
+		});
+
+		const result: DisplayLogEntry[] = Object.values(groupedLogs).sort((a, b) => {
+			const dateA = new Date(a.timestamp).getTime();
+			const dateB = new Date(b.timestamp).getTime();
+			return dateB - dateA;
+		});
+
+		return result;
+	};
+
 
 	const fetchLogs = useCallback(async () => {
 		try {
 			setLoading(true);
 			const logs = await getLogEntries();
-			const sortedLogs = [...logs].sort(
-				(a, b) =>
-					new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-			);
-			setLogEntries(sortedLogs);
+			const processedLogs = groupAndSortLogs(logs);
+			setLogEntries(processedLogs);
 		} catch (error) {
 			Alert.alert("Error", "Gagal memuat log.");
 			console.error("Error fetching log entries:", error);
@@ -64,6 +126,7 @@ export default function LogScreen() {
 	useEffect(() => {
 		fetchLogs();
 	}, []);
+
 	useEffect(() => {
 		if (isFocused) fetchLogs();
 	}, [isFocused]);
@@ -79,7 +142,30 @@ export default function LogScreen() {
 		setLogEntries(sorted);
 	};
 
-	const handleLogPress = async (log: CombinedLogEntry) => {
+	const handleFilterType = (type: "all" | "mutation_in" | "mutation_out" | "transaction") => {
+		setFilterType(type);
+	};
+
+	const filteredLogEntries = logEntries.filter((log) => {
+		if (filterType === "all") {
+			return true;
+		}
+		if (log.type === "transaction") {
+			return filterType === "transaction";
+		}
+		if (log.type === "groupedMutation") {
+			const groupedMutations = log as GroupedMutationEntry;
+			if (filterType === "mutation_in") {
+				return groupedMutations.entries.some(entry => entry.jumlah_mutasi > 0);
+			}
+			if (filterType === "mutation_out") {
+				return groupedMutations.entries.some(entry => entry.jumlah_mutasi < 0);
+			}
+		}
+		return false;
+	});
+
+	const handleLogPress = async (log: DisplayLogEntry) => {
 		if (log.type === "transaction") {
 			try {
 				const transactionDetails = await getTransactionDetailsById(log.id);
@@ -95,13 +181,13 @@ export default function LogScreen() {
 				console.error("Error:", error);
 				Alert.alert("Error", "Gagal memuat detail transaksi.");
 			}
-		} else {
-			setSelectedMutationDetails(log);
+		} else if (log.type === "groupedMutation") {
+			setSelectedMutationGroupDetails(log);
 			setMutationDetailModalVisible(true);
 		}
 	};
 
-	const renderLogItem = ({ item }: { item: CombinedLogEntry }) => {
+	const renderLogItem = ({ item }: { item: DisplayLogEntry }) => {
 		const formattedDate = new Date(item.timestamp).toLocaleString("id-ID", {
 			year: "numeric",
 			month: "2-digit",
@@ -109,29 +195,72 @@ export default function LogScreen() {
 			hour: "2-digit",
 			minute: "2-digit",
 		});
-		let description = "";
+		let descriptionContent;
 		let typeColor = "#b0b3b8";
+		let typeText = "";
 
-		if (item.type === "mutation") {
-			const log = item as LogEntry;
-			if (log.jumlah_mutasi > 0) {
-				description = `Penambahan ${log.jumlah_mutasi} ${log.nama_barang} (${log.sku})`;
+		if (item.type === "groupedMutation") {
+			const log = item as GroupedMutationEntry;
+			typeText = "Mutasi";
+
+			const hasIncoming = log.entries.some(entry => entry.jumlah_mutasi > 0);
+			const hasOutgoing = log.entries.some(entry => entry.jumlah_mutasi < 0);
+
+			if (hasIncoming && !hasOutgoing) {
 				typeColor = "#4CAF50";
-			} else {
-				description = `Pengurangan ${Math.abs(log.jumlah_mutasi)} ${
-					log.nama_barang
-				} (${log.sku})`;
+			} else if (!hasIncoming && hasOutgoing) {
 				typeColor = "#FF5722";
+			} else if (hasIncoming && hasOutgoing) {
+				typeColor = "#FFA500";
 			}
-		} else {
+
+			descriptionContent = (
+				<View>
+					<Text style={[styles.rowData, { fontWeight: 'bold', color: typeColor }]}>
+						Mutasi Barang {hasIncoming && hasOutgoing ? "Masuk/Keluar" : hasIncoming ? "Masuk" : "Keluar"}:
+					</Text>
+					{log.entries.map((entry, index) => (
+						<Text
+							key={`${entry.id}-${index}`}
+							style={[
+								styles.rowData,
+								{
+									color: entry.jumlah_mutasi > 0 ? "#4CAF50" : "#FF5722",
+									marginLeft: 10,
+								},
+							]}
+						>
+							- {entry.nama_barang} x {Math.abs(entry.jumlah_mutasi)} ({entry.sku})
+						</Text>
+					))}
+				</View>
+			);
+		} else { // item.type === "transaction"
 			const log = item as TransactionLogEntry;
 			const details: TransactionDetails = JSON.parse(
 				log.transaction_details_json
 			);
-			description = `Transaksi Penjualan (Total: Rp${details.totalPrice.toLocaleString(
-				"id-ID"
-			)})`;
 			typeColor = "#00d4ff";
+			typeText = "Transaksi";
+
+			descriptionContent = (
+				<View>
+					<Text style={[styles.rowData, { fontWeight: 'bold', color: typeColor }]}>
+						Transaksi Penjualan:
+					</Text>
+					{details.items.map((itemSold, index) => (
+						<Text
+							key={`${log.id}-item-${index}`}
+							style={[styles.rowData, { marginLeft: 10 }]}
+						>
+							- {itemSold.nama_barang} x {itemSold.quantity} ({itemSold.sku})
+						</Text>
+					))}
+					<Text style={[styles.rowData, { marginTop: 5, fontWeight: 'bold' }]}>
+						(Total: Rp{details.totalPrice.toLocaleString("id-ID")})
+					</Text>
+				</View>
+			);
 		}
 
 		return (
@@ -140,17 +269,11 @@ export default function LogScreen() {
 				onPress={() => handleLogPress(item)}
 			>
 				<Text style={[styles.rowData, styles.dateColumn]}>{formattedDate}</Text>
-				<Text
-					style={[
-						styles.rowData,
-						styles.descriptionColumn,
-						{ color: typeColor },
-					]}
-				>
-					{description}
-				</Text>
+				<View style={styles.descriptionColumn}>
+					{descriptionContent}
+				</View>
 				<Text style={[styles.rowData, styles.typeColumn, { color: typeColor }]}>
-					{item.type === "mutation" ? "Mutasi" : "Transaksi"}
+					{typeText}
 				</Text>
 			</TouchableOpacity>
 		);
@@ -198,16 +321,38 @@ export default function LogScreen() {
 							<View style={styles.headerColumn}>
 								<Text style={styles.headerText}>Deskripsi</Text>
 							</View>
-							<View style={styles.headerColumn}>
-								<Text style={styles.headerText}>Tipe</Text>
-							</View>
+							<TouchableOpacity
+								onPress={() => {
+									if (filterType === "all") {
+										handleFilterType("mutation_in");
+									} else if (filterType === "mutation_in") {
+										handleFilterType("mutation_out");
+									} else if (filterType === "mutation_out") {
+										handleFilterType("transaction");
+									} else {
+										handleFilterType("all");
+									}
+								}}
+								style={styles.headerColumn}
+							>
+								<Text style={styles.headerText}>
+									Tipe{" "}
+									{filterType === "all"
+										? "(Semua)"
+										: filterType === "mutation_in"
+										? "(Mutasi Masuk)"
+										: filterType === "mutation_out"
+										? "(Mutasi Keluar)"
+										: "(Transaksi)"}
+								</Text>
+							</TouchableOpacity>
 						</View>
 						<FlatList
-							contentContainerStyle={{ paddingBottom: 80 }} // agar ada space bawah
-							data={logEntries}
+							contentContainerStyle={{ paddingBottom: 80 }}
+							data={filteredLogEntries}
 							renderItem={renderLogItem}
 							keyExtractor={(item) =>
-								`${item.type}-${item.id}-${item.timestamp}`
+								item.type === "groupedMutation" ? item.id : `${item.type}-${item.id}-${item.timestamp}`
 							}
 							ListEmptyComponent={
 								<Text style={{ textAlign: "center", marginVertical: 20 }}>
@@ -219,7 +364,6 @@ export default function LogScreen() {
 				</View>
 			</LinearGradient>
 
-			{/* Modal Mutasi */}
 			<Modal
 				animationType="slide"
 				transparent
@@ -227,35 +371,39 @@ export default function LogScreen() {
 			>
 				<View style={styles.modalOverlay}>
 					<View style={styles.mutationDetailModalContainer}>
-						<Text style={styles.mutationDetailModalTitle}>Detail Mutasi</Text>
-						{selectedMutationDetails && (
+						<Text style={styles.mutationDetailModalTitle}>Detail Mutasi Grup</Text>
+						{selectedMutationGroupDetails && (
 							<>
 								<Text style={styles.mutationDetailText}>
 									Tanggal:{" "}
-									{new Date(selectedMutationDetails.timestamp).toLocaleString(
+									{new Date(selectedMutationGroupDetails.timestamp).toLocaleString(
 										"id-ID"
 									)}
 								</Text>
-								<Text style={styles.mutationDetailText}>
-									Nama Barang: {selectedMutationDetails.nama_barang}
-								</Text>
-								<Text style={styles.mutationDetailText}>
-									SKU: {selectedMutationDetails.sku}
-								</Text>
-								<Text style={styles.mutationDetailText}>
-									Jumlah Mutasi:{" "}
-									<Text
-										style={{
-											color:
-												selectedMutationDetails.jumlah_mutasi > 0
-													? "#4CAF50"
-													: "#FF5722",
-										}}
-									>
-										{selectedMutationDetails.jumlah_mutasi > 0 ? "+" : ""}
-										{selectedMutationDetails.jumlah_mutasi}
-									</Text>
-								</Text>
+								{selectedMutationGroupDetails.entries.map((entry, index) => (
+									<View key={`${entry.id}-${index}-modal`} style={styles.mutationEntryModalItem}>
+										<Text style={styles.mutationDetailText}>
+											Nama Barang: {entry.nama_barang}
+										</Text>
+										<Text style={styles.mutationDetailText}>
+											SKU: {entry.sku}
+										</Text>
+										<Text style={styles.mutationDetailText}>
+											Jumlah Mutasi:{" "}
+											<Text
+												style={{
+													color:
+														entry.jumlah_mutasi > 0
+															? "#4CAF50"
+															: "#FF5722",
+												}}
+											>
+												{entry.jumlah_mutasi > 0 ? "+" : ""}
+												{entry.jumlah_mutasi}
+											</Text>
+										</Text>
+									</View>
+								))}
 							</>
 						)}
 						<TouchableOpacity
@@ -375,6 +523,7 @@ const styles = StyleSheet.create({
 		padding: 20,
 		borderRadius: 16,
 		width: "80%",
+		maxHeight: "80%",
 		elevation: 10,
 	},
 	mutationDetailModalTitle: {
@@ -384,6 +533,12 @@ const styles = StyleSheet.create({
 	},
 	mutationDetailText: {
 		fontSize: 14,
+		marginBottom: 4,
+	},
+	mutationEntryModalItem: {
+		borderBottomWidth: 1,
+		borderColor: "#eee",
+		paddingBottom: 8,
 		marginBottom: 8,
 	},
 	closeModalButton: {
