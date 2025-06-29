@@ -11,6 +11,7 @@ import {
 	Alert,
 	FlatList,
 	KeyboardAvoidingView,
+	Modal, // Import Modal
 	Platform,
 	SafeAreaView,
 	StatusBar,
@@ -22,7 +23,9 @@ import {
 } from "react-native";
 // Perbarui import:
 import {
-	addTransactionLog, // Masih digunakan untuk update stok
+	addTransactionLog, // <-- Tambahkan ini
+	Barang, // <-- Tambahkan ini
+	getAllStock, // Masih digunakan untuk update stok
 	getItemBySku, // <-- Tambahkan ini
 	TransactionDetails,
 	updateStock,
@@ -43,6 +46,9 @@ export default function CartScreen() {
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
 	const [cashReceived, setCashReceived] = useState("");
 	const [change, setChange] = useState(0);
+	const [showAddItemModal, setShowAddItemModal] = useState(false); // State untuk modal
+	const [availableStock, setAvailableStock] = useState<Barang[]>([]); // State untuk stok yang tersedia
+	const [searchStockText, setSearchStockText] = useState(""); // State untuk pencarian di modal
 
 	const handleCashReceivedChange = (text: string) => {
 		setCashReceived(text);
@@ -56,15 +62,26 @@ export default function CartScreen() {
 		}
 	};
 
+	const fetchAvailableStock = useCallback(async () => {
+		try {
+			const stock = await getAllStock();
+			setAvailableStock(stock);
+		} catch (error) {
+			console.error("Error fetching available stock:", error);
+			Alert.alert("Error", "Gagal memuat daftar barang.");
+		}
+	}, []);
+
 	useFocusEffect(
 		useCallback(() => {
 			if (route.params?.cartItems) {
 				setCartItems(route.params.cartItems);
 			}
+			fetchAvailableStock(); // Fetch stock when screen is focused
 			return () => {
 				// Cleanup jika diperlukan
 			};
-		}, [route.params?.cartItems])
+		}, [route.params?.cartItems, fetchAvailableStock])
 	);
 
 	const calculateTotalPrice = () => {
@@ -90,6 +107,48 @@ export default function CartScreen() {
 
 	const handleRemoveItem = (id: number) => {
 		setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+	};
+
+	const handleAddItemToCart = (item: Barang) => {
+		setCartItems((prevItems) => {
+			const existingItemIndex = prevItems.findIndex(
+				(cartItem) => cartItem.id === item.id
+			);
+
+			if (existingItemIndex > -1) {
+				// If item exists, increment quantity
+				const updatedItems = [...prevItems];
+				const updatedQuantity = updatedItems[existingItemIndex].quantity + 1;
+				if (updatedQuantity > item.stok) {
+					Alert.alert(
+						"Stok Tidak Cukup",
+						`Stok ${item.nama_barang} hanya ${item.stok}.`
+					);
+					return prevItems; // Don't update if quantity exceeds stock
+				}
+				updatedItems[existingItemIndex] = {
+					...updatedItems[existingItemIndex],
+					quantity: updatedQuantity,
+				};
+				return updatedItems;
+			} else {
+				// If item is new, add it to cart with quantity 1
+				if (item.stok === 0) {
+					Alert.alert(
+						"Stok Habis",
+						`${item.nama_barang} sedang tidak tersedia.`
+					);
+					return prevItems;
+				}
+				const newItem: CartItem = {
+					...item,
+					quantity: 1,
+				};
+				return [...prevItems, newItem];
+			}
+		});
+		setShowAddItemModal(false); // Close modal after adding
+		setSearchStockText(""); // Clear search text
 	};
 
 	const handleProcessTransaction = async () => {
@@ -119,11 +178,29 @@ export default function CartScreen() {
 					text: "Bayar",
 					onPress: async () => {
 						try {
+							// Check stock availability for all items before proceeding
+							for (const item of cartItems) {
+								const currentStockItem = await getItemBySku(item.sku);
+								if (
+									!currentStockItem ||
+									currentStockItem.stok < item.quantity
+								) {
+									Alert.alert(
+										"Stok Tidak Cukup",
+										`Stok ${item.nama_barang} tidak cukup. Tersisa: ${
+											currentStockItem?.stok || 0
+										}`
+									);
+									return; // Stop transaction if stock is insufficient
+								}
+							}
+
 							// 1. Update stock and add individual mutation logs
 							for (const item of cartItems) {
 								const currentStock = (await getItemBySku(item.sku))?.stok || 0;
 								const newStock = currentStock - item.quantity;
 
+								// Stock check already done above, but good to have here too as a safeguard
 								if (newStock < 0) {
 									Alert.alert(
 										"Stok Tidak Cukup",
@@ -139,8 +216,8 @@ export default function CartScreen() {
 									newStock
 								);
 
-								// addLogEntry sudah dipanggil di updateStock, jadi tidak perlu panggil lagi di sini
-								// jika updateStock sudah menangani log mutasi (jumlah_mutasi negatif)
+								// addLogEntry already called in updateStock, so no need to call again here
+								// if updateStock already handles mutation logs (negative jumlah_mutasi)
 							}
 
 							// 2. Add full transaction log entry
@@ -196,6 +273,29 @@ export default function CartScreen() {
 		</View>
 	);
 
+	const filteredAvailableStock = availableStock.filter(
+		(item) =>
+			item.nama_barang.toLowerCase().includes(searchStockText.toLowerCase()) ||
+			item.sku.toLowerCase().includes(searchStockText.toLowerCase())
+	);
+
+	const renderStockItem = ({ item }: { item: Barang }) => (
+		<TouchableOpacity
+			style={styles.stockItem}
+			onPress={() => handleAddItemToCart(item)}
+		>
+			<View>
+				<Text style={styles.stockItemName}>
+					{item.nama_barang} ({item.sku})
+				</Text>
+				<Text style={styles.stockItemDetails}>
+					Harga: Rp{item.harga.toLocaleString("id-ID")} | Stok: {item.stok}
+				</Text>
+			</View>
+			<Text style={styles.stockAddItemButtonText}>Add</Text>
+		</TouchableOpacity>
+	);
+
 	const totalPrice = calculateTotalPrice();
 
 	return (
@@ -211,6 +311,15 @@ export default function CartScreen() {
 						Total {cartItems.length} item di keranjang
 					</Text>
 				</View>
+
+				<TouchableOpacity
+					style={styles.addItemManuallyButton}
+					onPress={() => setShowAddItemModal(true)}
+				>
+					<Text style={styles.addItemManuallyButtonText}>
+						Tambah Barang dari Stok
+					</Text>
+				</TouchableOpacity>
 
 				{cartItems.length === 0 ? (
 					<View style={styles.emptyCart}>
@@ -261,6 +370,50 @@ export default function CartScreen() {
 					</TouchableOpacity>
 				</View>
 			</KeyboardAvoidingView>
+
+			{/* Modal untuk menambah barang dari stok */}
+			<Modal
+				animationType="slide"
+				transparent={false}
+				visible={showAddItemModal}
+				onRequestClose={() => {
+					setShowAddItemModal(false);
+					setSearchStockText(""); // Clear search when closing
+				}}
+			>
+				<SafeAreaView style={styles.modalContainer}>
+					<View style={styles.modalHeader}>
+						<Text style={styles.modalTitle}>Pilih Barang dari Stok</Text>
+						<TouchableOpacity
+							onPress={() => {
+								setShowAddItemModal(false);
+								setSearchStockText("");
+							}}
+							style={styles.modalCloseButton}
+						>
+							<Text style={styles.modalCloseButtonText}>X</Text>
+						</TouchableOpacity>
+					</View>
+					<TextInput
+						style={styles.modalSearchInput}
+						placeholder="Cari barang (Nama/SKU)"
+						placeholderTextColor="#b0b3b8"
+						value={searchStockText}
+						onChangeText={setSearchStockText}
+					/>
+					<FlatList
+						data={filteredAvailableStock}
+						renderItem={renderStockItem}
+						keyExtractor={(item) => String(item.id)}
+						contentContainerStyle={styles.stockListContainer}
+						ListEmptyComponent={
+							<Text style={styles.emptyStockText}>
+								Tidak ada barang tersedia.
+							</Text>
+						}
+					/>
+				</SafeAreaView>
+			</Modal>
 		</SafeAreaView>
 	);
 }
@@ -269,6 +422,8 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: "#1a1a2e",
+		paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+		paddingBottom: 45,
 	},
 	header: {
 		alignItems: "center",
@@ -399,5 +554,94 @@ const styles = StyleSheet.create({
 		color: "#1a1a2e",
 		fontSize: 18,
 		fontWeight: "bold",
+	},
+	addItemManuallyButton: {
+		backgroundColor: "#007bff",
+		paddingVertical: 12,
+		paddingHorizontal: 20,
+		borderRadius: 8,
+		alignSelf: "center",
+		marginTop: 10,
+		marginBottom: 20,
+	},
+	addItemManuallyButtonText: {
+		color: "white",
+		fontSize: 16,
+		fontWeight: "bold",
+	},
+	modalContainer: {
+		flex: 1,
+		backgroundColor: "#1a1a2e",
+		paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+	},
+	modalHeader: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		padding: 20,
+		borderBottomWidth: 1,
+		borderBottomColor: "rgba(0, 212, 255, 0.3)",
+	},
+	modalTitle: {
+		fontSize: 20,
+		fontWeight: "bold",
+		color: "white",
+	},
+	modalCloseButton: {
+		padding: 10,
+	},
+	modalCloseButtonText: {
+		color: "white",
+		fontSize: 18,
+		fontWeight: "bold",
+	},
+	modalSearchInput: {
+		backgroundColor: "rgba(255, 255, 255, 0.1)",
+		color: "white",
+		fontSize: 16,
+		padding: 10,
+		borderRadius: 8,
+		marginHorizontal: 16,
+		marginTop: 10,
+		marginBottom: 10,
+		borderWidth: 1,
+		borderColor: "rgba(0, 212, 255, 0.4)",
+	},
+	stockListContainer: {
+		paddingHorizontal: 16,
+		paddingBottom: 20,
+	},
+	stockItem: {
+		backgroundColor: "rgba(255, 255, 255, 0.05)",
+		borderRadius: 10,
+		padding: 15,
+		marginBottom: 10,
+		borderWidth: 1,
+		borderColor: "rgba(0, 212, 255, 0.2)",
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+	},
+	stockItemName: {
+		fontSize: 16,
+		fontWeight: "bold",
+		color: "white",
+	},
+	stockItemDetails: {
+		fontSize: 14,
+		color: "#b0b3b8",
+		marginTop: 4,
+	},
+	stockAddItemButtonText: {
+		color: "#00d4ff",
+		fontWeight: "bold",
+		fontSize: 16,
+	},
+	emptyStockText: {
+		color: "#b0b3b8",
+		fontSize: 16,
+		fontStyle: "italic",
+		textAlign: "center",
+		marginTop: 20,
 	},
 });

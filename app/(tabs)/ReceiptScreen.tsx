@@ -97,9 +97,9 @@ export default function ReceiptScreen() {
         <div class="container">
           <h1>Struk Belanja</h1>
           <div class="shop-info">
-            <p>Toko Contoh Jaya</p>
-            <p>Jl. Maju Mundur No. 123</p>
-            <p>Telp: 0812-3456-7890</p>
+            <p>Toko Annaya Tegal</p>
+            <p>Jl. Merpati No.120, Randugunting, Kec. Tegal Sel., Kota Tegal, Jawa Tengah 52131</p>
+            <p>Telp: 085879525641</p>
             <p>Tanggal: ${formattedDate}</p>
           </div>
 
