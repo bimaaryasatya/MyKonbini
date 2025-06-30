@@ -1,4 +1,3 @@
-// screens/ReceiptScreen.tsx
 import {
 	useNavigation,
 	useRoute,
@@ -168,9 +167,9 @@ export default function ReceiptScreen() {
 				<View style={styles.receiptContainer}>
 					<Text style={styles.headerTitle}>Struk Belanja</Text>
 					<View style={styles.shopInfo}>
-						<Text style={styles.shopName}>Toko Contoh Jaya</Text>
-						<Text style={styles.shopAddress}>Jl. Maju Mundur No. 123</Text>
-						<Text style={styles.shopContact}>Telp: 0812-3456-7890</Text>
+						<Text style={styles.shopName}>Toko Annaya Tegal</Text>
+						<Text style={styles.shopAddress}>Jl. Merpati No.120, Randugunting, Kec. Tegal Sel., Kota Tegal, Jawa Tengah 52131</Text>
+						<Text style={styles.shopContact}>WA: 085879525641</Text>
 						<Text style={styles.transactionDate}>
 							Tanggal:{" "}
 							{new Date(transactionDetails.date).toLocaleString("id-ID", {
@@ -279,6 +278,7 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: "#666",
 		marginTop: 2,
+		textAlign: "center",
 	},
 	shopContact: {
 		fontSize: 14,

@@ -30,7 +30,7 @@ type TransactionScreenNavigationProp = NavigationProp<
 
 export default function TransactionScreen() {
 	// Changed to infer type as 'string' or more specifically '"back"'
-	const [facing, setFacing] = useState("back");
+	const [facing] = useState("back");
 	const [permission, requestPermission] = useCameraPermissions();
 	const [scanned, setScanned] = useState(false);
 	const [cart, setCart] = useState<CartItem[]>([]);

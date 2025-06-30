@@ -114,10 +114,10 @@ export default function HomeScreen() {
 					<View style={styles.logoContainer}>
 						<View style={styles.logoBackground}>
 							<LinearGradient
-								colors={["rgba(59, 130, 246, 0.8)", "rgba(99, 102, 241, 0.8)"]}
+								colors={["rgba(78, 59, 246, 0.8)", "rgba(99, 102, 241, 0.8)"]}
 								style={styles.logoGradient}
 							>
-								<Ionicons name="storefront" size={60} color="white" />
+								<Ionicons name="storefront-outline" size={60} color="white" />
 							</LinearGradient>
 						</View>
 						<Text style={styles.logoText}>Kasir Digital Toko Annaya</Text>
